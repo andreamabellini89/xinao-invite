@@ -327,7 +327,7 @@ export default function EventDetailPage() {
                   </button>
                   {/* Delete selected */}
                   <button
-                    onClick={() => setDeleteConfirm({ ids: [...selected], count: selected.size })}
+                    onClick={() => setDeleteConfirm({ ids: Array.from(selected), count: selected.size })}
                     style={{ padding:'8px 16px', background:T.red, color:T.white, border:'none', borderRadius:2, cursor:'pointer', fontSize:10, letterSpacing:'0.15em', fontFamily:'sans-serif', fontWeight:700 }}>
                     ✕ DELETE ({selected.size})
                   </button>
