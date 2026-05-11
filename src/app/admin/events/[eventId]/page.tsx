@@ -353,7 +353,7 @@ export default function EventDetailPage() {
                     style={{padding:'7px 14px',background:T.gold,color:T.black,border:'none',borderRadius:2,cursor:bulkSending?'not-allowed':'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',fontWeight:700}}>
                     {bulkSending?`✉ ${sendProgress?.done}/${sendProgress?.total}…`:`✉ SEND INVITATIONS (${selected.size})`}
                   </button>
-                  <button onClick={()=>setDeleteConfirm({ids:[...selected],count:selected.size})}
+                  <button onClick={()=>setDeleteConfirm({ids:Array.from(selected),count:selected.size})}
                     style={{padding:'7px 14px',background:T.red,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',fontWeight:700}}>
                     ✕ DELETE ({selected.size})
                   </button>
