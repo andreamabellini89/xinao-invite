@@ -335,7 +335,7 @@ export default function AdminPage() {
                     ⋯
                   </button>
                   {menuOpen===evt.id&&(
-                    <div style={{position:'absolute',top:31,right:0,background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,boxShadow:'0 4px 20px rgba(0,0,0,0.1)',zIndex:100,minWidth:160,overflow:'hidden'}}>
+                    <div style={{position:'absolute',bottom:31,right:0,background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,boxShadow:'0 4px 20px rgba(0,0,0,0.1)',zIndex:100,minWidth:160,overflow:'hidden'}}>
                       <button onClick={()=>{setMenuOpen(null);setEditEvt(evt);setFormOpen(true)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.n800,textAlign:'left'}}>✎  Edit</button>
                       <button onClick={()=>{setMenuOpen(null);setAddGuestEvt(evt.id)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.n800,textAlign:'left'}}>+ Add Guests</button>
                       <button onClick={()=>{setMenuOpen(null);dupEvent(evt)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.n800,textAlign:'left'}}>⧉  Duplicate</button>
