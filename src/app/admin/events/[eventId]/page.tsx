@@ -222,14 +222,13 @@ export default function EventDetailPage() {
   const toggleOne = (id:string) => setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n})
   const toggleAll = (list:Guest[]) => { if(list.every(g=>selected.has(g.id))) setSelected(new Set()); else setSelected(new Set(list.map(g=>g.id))) }
 
-  // ── Derived ──
+// ── Derived ──
+  const total = guests.length
   const counts = {
-    total:counts2=>guests.length,
     registered: guests.filter(g=>g.status==='registered').length,
     checkedIn:  guests.filter(g=>g.status==='checked-in').length,
     invited:    guests.filter(g=>g.status==='invited').length,
   }
-  const total = guests.length
   const regPct = total ? Math.round(((counts.registered+counts.checkedIn)/total)*100) : 0
 
   const filtered = guests.filter(g=>{
