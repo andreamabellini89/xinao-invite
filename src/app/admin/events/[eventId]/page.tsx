@@ -90,6 +90,97 @@ function EditGuestModal({ guest, onSave, onClose }: { guest:Guest; onSave:(d:Par
   )
 }
 
+
+function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()=>void; onClose:()=>void }) {
+  const [tab,    setTab]    = useState<'single'|'csv'>('single')
+  const [form,   setForm]   = useState({ first_name:'', last_name:'', email:'', phone:'' })
+  const [csv,    setCsv]    = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg,    setMsg]    = useState('')
+  const T2 = require('@/lib/utils').THEME
+
+  const addSingle = async () => {
+    if (!form.first_name||!form.last_name) return
+    setSaving(true)
+    const { v4: uuid } = await import('uuid')
+    const { error } = await (await import('@supabase/supabase-js')).createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ).from('guests').insert({
+      event_id:eventId, first_name:form.first_name.trim(), last_name:form.last_name.trim(),
+      email:form.email.trim()||null, phone:form.phone.trim()||null,
+      guest_token:uuid(), qr_token:uuid(), status:'invited',
+    })
+    setSaving(false)
+    if (error) { setMsg('Error: '+error.message); return }
+    setMsg('Guest added!'); setTimeout(()=>{ onDone(); onClose() }, 700)
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{background:'#FAFAF8',borderRadius:4,padding:28,maxWidth:480,width:'100%',border:'1px solid #DDD8CF',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+          <div style={{fontSize:17,fontFamily:"'Georgia',serif",color:'#2A2520',fontWeight:700}}>Add Guests</div>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#A09890'}}>✕</button>
+        </div>
+        <div style={{display:'flex',gap:0,borderBottom:'1px solid #DDD8CF',marginBottom:18}}>
+          {(['single','csv'] as const).map(t=>(
+            <button key={t} onClick={()=>setTab(t)} style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?'#2A2520':'transparent'}`,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',color:tab===t?'#2A2520':'#A09890',fontWeight:tab===t?700:400,marginBottom:-1}}>
+              {t==='single'?'SINGLE GUEST':'CSV IMPORT'}
+            </button>
+          ))}
+        </div>
+        {tab==='single'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {(['first_name','last_name'] as const).map(f=>(
+                <div key={f}>
+                  <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:'#A09890',fontFamily:'sans-serif',marginBottom:4}}>{f.replace('_',' ').toUpperCase()} *</label>
+                  <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:'1px solid #DDD8CF',borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:'#2A2520',outline:'none',boxSizing:'border-box' as const}}/>
+                </div>
+              ))}
+            </div>
+            {(['email','phone'] as const).map(f=>(
+              <div key={f}>
+                <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:'#A09890',fontFamily:'sans-serif',marginBottom:4}}>{f.toUpperCase()}</label>
+                <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:'1px solid #DDD8CF',borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:'#2A2520',outline:'none',boxSizing:'border-box' as const}}/>
+              </div>
+            ))}
+            <button onClick={addSingle} disabled={saving||!form.first_name||!form.last_name}
+              style={{padding:'11px',background:'#2A2520',color:'#FAFAF8',border:'none',borderRadius:2,cursor:'pointer',fontSize:11,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700,marginTop:4}}>
+              {saving?'ADDING…':'ADD GUEST'}
+            </button>
+          </div>
+        )}
+        {tab==='csv'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{fontSize:11,color:'#5C5650',fontFamily:'sans-serif',lineHeight:1.7,background:'#F0EBE3',padding:'10px 12px',borderRadius:3}}>
+              Format: <code>first_name,last_name,email,phone</code><br/>One per line. Header optional.
+            </div>
+            <textarea value={csv} onChange={e=>setCsv(e.target.value)} rows={5}
+              style={{width:'100%',padding:'9px 11px',border:'1px solid #DDD8CF',borderRadius:2,fontSize:12,fontFamily:'monospace',color:'#2A2520',outline:'none',boxSizing:'border-box' as const,resize:'vertical' as const}}/>
+            <button onClick={async()=>{
+              const lines=csv.trim().split('\n').filter(Boolean); if(!lines.length) return
+              setSaving(true)
+              const {v4:uuid}=await import('uuid')
+              const start=lines[0].toLowerCase().includes('first_name')?1:0
+              const rows=lines.slice(start).map(line=>{const [fn='',ln='',em='',ph='']=line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));return{event_id:eventId,first_name:fn,last_name:ln,email:em||null,phone:ph||null,guest_token:uuid(),qr_token:uuid(),status:'invited' as const}}).filter(r=>r.first_name&&r.last_name)
+              const {createClient}=await import('@supabase/supabase-js')
+              const sb=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+              const {error}=await sb.from('guests').insert(rows)
+              setSaving(false)
+              if(error){setMsg('Error: '+error.message);return}
+              setMsg(`${rows.length} guests imported!`);setTimeout(()=>{onDone();onClose()},900)
+            }} disabled={saving||!csv.trim()} style={{padding:'11px',background:'#2A2520',color:'#FAFAF8',border:'none',borderRadius:2,cursor:'pointer',fontSize:11,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700}}>
+              {saving?'IMPORTING…':'IMPORT CSV'}
+            </button>
+          </div>
+        )}
+        {msg&&<div style={{marginTop:12,padding:'8px 12px',background:msg.startsWith('Error')?'#FCEAEA':'#EDF7ED',border:`1px solid ${msg.startsWith('Error')?'#E8A8A8':'#A8CFA8'}`,borderRadius:3,fontSize:12,color:msg.startsWith('Error')?'#E51E21':'#1E5C1E',fontFamily:'sans-serif'}}>{msg}</div>}
+      </div>
+    </div>
+  )
+}
+
 export default function EventDetailPage() {
   const params   = useParams()
   const router   = useRouter()
@@ -112,6 +203,7 @@ export default function EventDetailPage() {
   const [cameraActive, setCameraActive] = useState(false)
   const [manualCode,   setManualCode]   = useState('')
   const [scanResult,   setScanResult]   = useState<{type:string,guest?:Guest}|null>(null)
+  const [showAddGuest, setShowAddGuest] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
@@ -289,7 +381,10 @@ export default function EventDetailPage() {
               ))}
             </div>
             {event.cover_image_url&&<div style={{marginBottom:16}}><div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:6}}>INVITATION TEMPLATE</div><img src={event.cover_image_url} alt="template" style={{width:'100%',maxHeight:160,objectFit:'cover',borderRadius:4,border:`1px solid ${T.n200}`}}/></div>}
-            <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:8}}>RECENT REGISTRATIONS</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif'}}>RECENT REGISTRATIONS</div>
+              <button onClick={()=>setShowAddGuest(true)} style={{padding:'6px 12px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700}}>+ ADD GUESTS</button>
+            </div>
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
               {guests.filter(g=>g.registered_at).sort((a,b)=>new Date(b.registered_at!).getTime()-new Date(a.registered_at!).getTime()).slice(0,5).map(g=>(
                 <div key={g.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,padding:'10px 14px',gap:8,flexWrap:'wrap'}}>
@@ -514,7 +609,8 @@ export default function EventDetailPage() {
       </div>
 
       {deleteConfirm&&<ConfirmModal title="Delete" message={deleteConfirm.count===1?'Delete this guest?':`Delete ${deleteConfirm.count} guests?`} onConfirm={()=>deleteGuests(deleteConfirm.ids)} onCancel={()=>setDeleteConfirm(null)} danger/>}
-      {editGuest&&<EditGuestModal guest={editGuest} onSave={saveGuestEdit} onClose={()=>setEditGuest(null)}/>}
+      {editGuest&&<EditGuestModal guest={editGuest} onSave={saveGuestEdit} onClose={()=>setEditGuest(null)}/> }
+      {showAddGuest&&<AddGuestModal eventId={eventId} onDone={load} onClose={()=>setShowAddGuest(false)}/>}
       {error&&(
         <div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',background:T.red,color:T.white,padding:'10px 20px',borderRadius:4,fontSize:12,fontFamily:'sans-serif',zIndex:500,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',maxWidth:'90vw',textAlign:'center'}}>
           ⚠ {error}
