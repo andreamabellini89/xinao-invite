@@ -13,14 +13,122 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? ''
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-events.com'
+
+// ── Inline QR for registration link ──────────────────────────────────────────
+function RegistrationQR({ eventNumber, eventId }: { eventNumber: string; eventId: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState<string>('')
+  const regUrl = `${SITE}/registration/${eventNumber}`
+
+  useEffect(() => {
+    const gen = async () => {
+      try {
+        const QRCode = (await import('qrcode')).default
+        const url = await QRCode.toDataURL(regUrl, { width: 200, margin: 2, color: { dark: '#1A1008', light: '#FFFFFF' }, errorCorrectionLevel: 'H' })
+        setQrDataUrl(url)
+      } catch (e) { console.error(e) }
+    }
+    gen()
+  }, [regUrl])
+
+  const download = () => {
+    const a = document.createElement('a')
+    a.download = `xinao-registration-qr-${eventNumber}.png`
+    a.href = qrDataUrl
+    a.click()
+  }
+
+  return (
+    <div style={{ background: T.white, border: `1px solid ${T.n200}`, borderRadius: 4, padding: 20, textAlign: 'center' }}>
+      <div style={{ fontSize: 9, letterSpacing: '0.25em', color: T.n400, fontFamily: 'sans-serif', marginBottom: 14 }}>PUBLIC REGISTRATION QR CODE</div>
+      {qrDataUrl ? (
+        <div>
+          <img src={qrDataUrl} alt="Registration QR" style={{ width: 160, height: 160, display: 'block', margin: '0 auto 12px' }} />
+          <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif', marginBottom: 12, wordBreak: 'break-all' }}>
+            {regUrl}
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => navigator.clipboard.writeText(regUrl)}
+              style={{ padding: '7px 14px', background: 'none', border: `1px solid ${T.n200}`, borderRadius: 2, cursor: 'pointer', fontSize: 10, letterSpacing: '0.12em', fontFamily: 'sans-serif', color: T.n600 }}>
+              COPY LINK
+            </button>
+            <button onClick={download}
+              style={{ padding: '7px 14px', background: T.n800, color: T.white, border: 'none', borderRadius: 2, cursor: 'pointer', fontSize: 10, letterSpacing: '0.12em', fontFamily: 'sans-serif', fontWeight: 700 }}>
+              ⬇ DOWNLOAD QR
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ width: 160, height: 160, background: T.n100, margin: '0 auto', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ fontSize: 10, color: T.n400, fontFamily: 'sans-serif' }}>Generating…</div>
+        </div>
+      )}
+      <div style={{ fontSize: 10, color: T.n400, fontFamily: 'sans-serif', marginTop: 12, lineHeight: 1.6 }}>
+        Insert this QR code in your invitation graphic.<br/>Anyone who scans it can submit a registration request.
+      </div>
+    </div>
+  )
+}
+
+// ── Request card ──────────────────────────────────────────────────────────────
+function RequestCard({ req, onApprove, onReject, loading }: {
+  req: any; onApprove: () => void; onReject: () => void; loading: boolean
+}) {
+  const statusColor = { pending: T.gold, approved: T.green, rejected: T.n400 }[req.status as string] ?? T.n400
+  const statusBg    = { pending: T.goldBg, approved: T.greenBg, rejected: T.n100 }[req.status as string] ?? T.n100
+
+  return (
+    <div style={{ background: T.white, border: `1px solid ${T.n200}`, borderRadius: 4, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontFamily: "'Georgia',serif", fontWeight: 600, color: T.n800 }}>
+            {req.first_name} {req.last_name}
+          </div>
+          <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif', marginTop: 2 }}>{req.email}</div>
+          {req.phone && <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif' }}>{req.phone}</div>}
+          {req.message && (
+            <div style={{ fontSize: 11, color: T.n600, fontFamily: 'sans-serif', marginTop: 6, padding: '6px 10px', background: T.n100, borderRadius: 3, fontStyle: 'italic' }}>
+              "{req.message}"
+            </div>
+          )}
+          <div style={{ fontSize: 10, color: T.n400, fontFamily: 'sans-serif', marginTop: 6 }}>
+            Received: {fmtDate(req.created_at)} {fmtTime(req.created_at)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          {/* Status badge */}
+          <span style={{ padding: '3px 10px', background: statusBg, color: statusColor, border: `1px solid ${statusColor}`, borderRadius: 3, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+            {req.status.toUpperCase()}
+          </span>
+          {/* Action buttons — only for pending */}
+          {req.status === 'pending' && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={onReject} disabled={loading}
+                style={{ padding: '7px 12px', background: 'none', border: `1px solid ${T.red}`, color: T.red, borderRadius: 2, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 10, letterSpacing: '0.12em', fontFamily: 'sans-serif', fontWeight: 700 }}>
+                ✕ REJECT
+              </button>
+              <button onClick={onApprove} disabled={loading}
+                style={{ padding: '7px 12px', background: T.green, color: T.white, border: 'none', borderRadius: 2, cursor: loading ? 'not-allowed' : 'pointer', fontSize: 10, letterSpacing: '0.12em', fontFamily: 'sans-serif', fontWeight: 700 }}>
+                ✓ APPROVE
+              </button>
+            </div>
+          )}
+          {req.status === 'approved' && (
+            <div style={{ fontSize: 10, color: T.green, fontFamily: 'sans-serif' }}>
+              ✓ Invitation sent
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function useIsMobile() {
   const [m, setM] = useState(false)
   useEffect(() => {
     const check = () => setM(window.innerWidth < 700)
-    check()
-    window.addEventListener('resize', check)
+    check(); window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
   return m
@@ -90,22 +198,18 @@ function EditGuestModal({ guest, onSave, onClose }: { guest:Guest; onSave:(d:Par
   )
 }
 
-
 function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()=>void; onClose:()=>void }) {
-  const [tab,    setTab]    = useState<'single'|'csv'>('single')
-  const [form,   setForm]   = useState({ first_name:'', last_name:'', email:'', phone:'' })
-  const [csv,    setCsv]    = useState('')
+  const [tab, setTab] = useState<'single'|'csv'>('single')
+  const [form, setForm] = useState({ first_name:'', last_name:'', email:'', phone:'' })
+  const [csv, setCsv] = useState('')
   const [saving, setSaving] = useState(false)
-  const [msg,    setMsg]    = useState('')
-  const T2 = require('@/lib/utils').THEME
+  const [msg, setMsg] = useState('')
 
   const addSingle = async () => {
     if (!form.first_name||!form.last_name) return
     setSaving(true)
     const { v4: uuid } = await import('uuid')
-    const { error } = await (await import('@supabase/supabase-js')).createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    ).from('guests').insert({
+    const { error } = await supabase.from('guests').insert({
       event_id:eventId, first_name:form.first_name.trim(), last_name:form.last_name.trim(),
       email:form.email.trim()||null, phone:form.phone.trim()||null,
       guest_token:uuid(), qr_token:uuid(), status:'invited',
@@ -117,14 +221,14 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-      <div style={{background:'#FAFAF8',borderRadius:4,padding:28,maxWidth:480,width:'100%',border:'1px solid #DDD8CF',maxHeight:'90vh',overflowY:'auto'}}>
+      <div style={{background:T.white,borderRadius:4,padding:28,maxWidth:480,width:'100%',border:`1px solid ${T.n200}`,maxHeight:'90vh',overflowY:'auto'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-          <div style={{fontSize:17,fontFamily:"'Georgia',serif",color:'#2A2520',fontWeight:700}}>Add Guests</div>
-          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#A09890'}}>✕</button>
+          <div style={{fontSize:17,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:700}}>Add Guests</div>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:T.n400}}>✕</button>
         </div>
-        <div style={{display:'flex',gap:0,borderBottom:'1px solid #DDD8CF',marginBottom:18}}>
+        <div style={{display:'flex',gap:0,borderBottom:`1px solid ${T.n200}`,marginBottom:18}}>
           {(['single','csv'] as const).map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?'#2A2520':'transparent'}`,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',color:tab===t?'#2A2520':'#A09890',fontWeight:tab===t?700:400,marginBottom:-1}}>
+            <button key={t} onClick={()=>setTab(t)} style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1}}>
               {t==='single'?'SINGLE GUEST':'CSV IMPORT'}
             </button>
           ))}
@@ -134,86 +238,88 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
               {(['first_name','last_name'] as const).map(f=>(
                 <div key={f}>
-                  <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:'#A09890',fontFamily:'sans-serif',marginBottom:4}}>{f.replace('_',' ').toUpperCase()} *</label>
-                  <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:'1px solid #DDD8CF',borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:'#2A2520',outline:'none',boxSizing:'border-box' as const}}/>
+                  <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>{f.replace('_',' ').toUpperCase()} *</label>
+                  <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',boxSizing:'border-box'}}/>
                 </div>
               ))}
             </div>
             {(['email','phone'] as const).map(f=>(
               <div key={f}>
-                <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:'#A09890',fontFamily:'sans-serif',marginBottom:4}}>{f.toUpperCase()}</label>
-                <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:'1px solid #DDD8CF',borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:'#2A2520',outline:'none',boxSizing:'border-box' as const}}/>
+                <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>{f.toUpperCase()}</label>
+                <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',boxSizing:'border-box'}}/>
               </div>
             ))}
             <button onClick={addSingle} disabled={saving||!form.first_name||!form.last_name}
-              style={{padding:'11px',background:'#2A2520',color:'#FAFAF8',border:'none',borderRadius:2,cursor:'pointer',fontSize:11,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700,marginTop:4}}>
+              style={{padding:'11px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700,marginTop:4}}>
               {saving?'ADDING…':'ADD GUEST'}
             </button>
           </div>
         )}
         {tab==='csv'&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{fontSize:11,color:'#5C5650',fontFamily:'sans-serif',lineHeight:1.7,background:'#F0EBE3',padding:'10px 12px',borderRadius:3}}>
-              Format: <code>first_name,last_name,email,phone</code><br/>One per line. Header optional.
+            <div style={{fontSize:11,color:T.n600,fontFamily:'sans-serif',lineHeight:1.7,background:T.n100,padding:'10px 12px',borderRadius:3}}>
+              Format: <code>first_name,last_name,email,phone</code><br/>One per line.
             </div>
             <textarea value={csv} onChange={e=>setCsv(e.target.value)} rows={5}
-              style={{width:'100%',padding:'9px 11px',border:'1px solid #DDD8CF',borderRadius:2,fontSize:12,fontFamily:'monospace',color:'#2A2520',outline:'none',boxSizing:'border-box' as const,resize:'vertical' as const}}/>
+              style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'monospace',color:T.n800,outline:'none',boxSizing:'border-box',resize:'vertical'}}/>
             <button onClick={async()=>{
               const lines=csv.trim().split('\n').filter(Boolean); if(!lines.length) return
               setSaving(true)
               const {v4:uuid}=await import('uuid')
               const start=lines[0].toLowerCase().includes('first_name')?1:0
-              const rows=lines.slice(start).map(line=>{const [fn='',ln='',em='',ph='']=line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));return{event_id:eventId,first_name:fn,last_name:ln,email:em||null,phone:ph||null,guest_token:uuid(),qr_token:uuid(),status:'invited' as const}}).filter(r=>r.first_name&&r.last_name)
-              const {createClient}=await import('@supabase/supabase-js')
-              const sb=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-              const {error}=await sb.from('guests').insert(rows)
+              const rows=lines.slice(start).map(line=>{const [fn='',ln='',em='',ph='']=line.split(',').map(s=>s.trim());return{event_id:eventId,first_name:fn,last_name:ln,email:em||null,phone:ph||null,guest_token:uuid(),qr_token:uuid(),status:'invited' as const}}).filter(r=>r.first_name&&r.last_name)
+              const {error}=await supabase.from('guests').insert(rows)
               setSaving(false)
               if(error){setMsg('Error: '+error.message);return}
               setMsg(`${rows.length} guests imported!`);setTimeout(()=>{onDone();onClose()},900)
-            }} disabled={saving||!csv.trim()} style={{padding:'11px',background:'#2A2520',color:'#FAFAF8',border:'none',borderRadius:2,cursor:'pointer',fontSize:11,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700}}>
+            }} disabled={saving||!csv.trim()} style={{padding:'11px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',fontWeight:700}}>
               {saving?'IMPORTING…':'IMPORT CSV'}
             </button>
           </div>
         )}
-        {msg&&<div style={{marginTop:12,padding:'8px 12px',background:msg.startsWith('Error')?'#FCEAEA':'#EDF7ED',border:`1px solid ${msg.startsWith('Error')?'#E8A8A8':'#A8CFA8'}`,borderRadius:3,fontSize:12,color:msg.startsWith('Error')?'#E51E21':'#1E5C1E',fontFamily:'sans-serif'}}>{msg}</div>}
+        {msg&&<div style={{marginTop:12,padding:'8px 12px',background:msg.startsWith('Error')?T.redBg:T.greenBg,border:`1px solid ${msg.startsWith('Error')?T.redBorder:T.greenBorder}`,borderRadius:3,fontSize:12,color:msg.startsWith('Error')?T.red:T.green,fontFamily:'sans-serif'}}>{msg}</div>}
       </div>
     </div>
   )
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function EventDetailPage() {
   const params   = useParams()
   const router   = useRouter()
   const isMobile = useIsMobile()
   const eventId  = params.eventId as string
 
-  const [event,   setEvent]   = useState<XinaoEvent|null>(null)
-  const [guests,  setGuests]  = useState<Guest[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState<string|null>(null)
-  const [tab,     setTab]     = useState<'overview'|'guests'|'scanner'>('overview')
+  const [event,    setEvent]    = useState<XinaoEvent|null>(null)
+  const [guests,   setGuests]   = useState<Guest[]>([])
+  const [requests, setRequests] = useState<any[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState<string|null>(null)
+  const [tab,      setTab]      = useState<'overview'|'guests'|'requests'|'scanner'>('overview')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [search,  setSearch]  = useState('')
-  const [preview, setPreview] = useState<string|null>(null)
-  const [selected,    setSelected]    = useState<Set<string>>(new Set())
-  const [bulkSending, setBulkSending] = useState(false)
+  const [reqFilter,    setReqFilter]    = useState('pending')
+  const [search,   setSearch]   = useState('')
+  const [preview,  setPreview]  = useState<string|null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkSending,  setBulkSending]  = useState(false)
   const [sendProgress, setSendProgress] = useState<{done:number,total:number,errors:string[]}|null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ids:string[],count:number}|null>(null)
-  const [editGuest, setEditGuest] = useState<Guest|null>(null)
+  const [editGuest,    setEditGuest]    = useState<Guest|null>(null)
+  const [showAddGuest, setShowAddGuest] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
   const [manualCode,   setManualCode]   = useState('')
   const [scanResult,   setScanResult]   = useState<{type:string,guest?:Guest}|null>(null)
-  const [showAddGuest, setShowAddGuest] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState<string|null>(null)
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const [{ data:evt, error:e1 }, { data:gsts, error:e2 }] = await Promise.all([
+      const [{ data:evt }, { data:gsts }, { data:reqs }] = await Promise.all([
         supabase.from('events').select('*').eq('id', eventId).single(),
         supabase.from('guests').select('*').eq('event_id', eventId).order('last_name'),
+        supabase.from('registration_requests').select('*').eq('event_id', eventId).order('created_at', { ascending: false }),
       ])
-      if (e1) throw e1; if (e2) throw e2
-      setEvent(evt); setGuests(gsts ?? [])
+      setEvent(evt); setGuests(gsts ?? []); setRequests(reqs ?? [])
     } catch (e:any) { setError(e.message) }
     setLoading(false)
   }, [eventId])
@@ -240,14 +346,12 @@ export default function EventDetailPage() {
 
   const saveGuestEdit = async (data: Partial<Guest>) => {
     if (!editGuest) return
-    const { error } = await supabase.from('guests').update({...data,updated_at:new Date().toISOString()}).eq('id',editGuest.id)
-    if (error) { setError(error.message); return }
+    await supabase.from('guests').update({...data,updated_at:new Date().toISOString()}).eq('id',editGuest.id)
     setGuests(p => p.map(g => g.id===editGuest.id ? {...g,...data} : g))
   }
 
   const deleteGuests = async (ids: string[]) => {
-    const { error } = await supabase.from('guests').delete().in('id',ids)
-    if (error) { setError(error.message); return }
+    await supabase.from('guests').delete().in('id',ids)
     setGuests(p => p.filter(g => !ids.includes(g.id)))
     setSelected(new Set()); setDeleteConfirm(null)
   }
@@ -262,7 +366,7 @@ export default function EventDetailPage() {
   const bulkSend = async () => {
     if (!event || selected.size===0) return
     const toSend = guests.filter(g => selected.has(g.id) && g.email)
-    if (!toSend.length) { setError('No selected guests have an email address.'); return }
+    if (!toSend.length) { setError('No selected guests have an email.'); return }
     setBulkSending(true); setSendProgress({done:0,total:toSend.length,errors:[]})
     const errors: string[] = []
     for (let i=0; i<toSend.length; i++) {
@@ -275,15 +379,35 @@ export default function EventDetailPage() {
     setTimeout(()=>{setSendProgress(null);setSelected(new Set())},4000)
   }
 
+  // ── Review request (approve/reject) ──
+  const reviewRequest = async (requestId: string, action: 'approve'|'reject') => {
+    setReviewLoading(requestId)
+    try {
+      const res = await fetch('/api/review-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      // Reload to get updated data
+      await load()
+    } catch (e: any) {
+      setError(e.message)
+    }
+    setReviewLoading(null)
+  }
+
   const toggleOne = (id:string) => setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n})
   const toggleAll = (list:Guest[]) => { if(list.every(g=>selected.has(g.id))) setSelected(new Set()); else setSelected(new Set(list.map(g=>g.id))) }
 
-  const total      = guests.length
+  const total  = guests.length
   const counts = {
     registered: guests.filter(g=>g.status==='registered').length,
     checkedIn:  guests.filter(g=>g.status==='checked-in').length,
     invited:    guests.filter(g=>g.status==='invited').length,
   }
+  const pendingRequests = requests.filter(r => r.status === 'pending').length
   const regPct = total ? Math.round(((counts.registered+counts.checkedIn)/total)*100) : 0
 
   const filtered = guests.filter(g=>{
@@ -293,6 +417,8 @@ export default function EventDetailPage() {
   const {sorted,key:sk,dir:sd,toggle} = useSort(filtered,'last_name')
   const allChecked = sorted.length>0 && sorted.every(g=>selected.has(g.id))
   const someChecked = sorted.some(g=>selected.has(g.id))
+
+  const filteredRequests = requests.filter(r => reqFilter === 'all' || r.status === reqFilter)
 
   const SortCol = ({k,label}:{k:keyof Guest;label:string}) => (
     <div onClick={()=>toggle(k)} style={{cursor:'pointer',userSelect:'none',display:'flex',alignItems:'center',gap:3}}>
@@ -314,31 +440,26 @@ export default function EventDetailPage() {
   }
 
   if (loading) return <div style={{minHeight:'100vh',background:T.n100,display:'flex',alignItems:'center',justifyContent:'center',color:T.n400,fontFamily:'sans-serif'}}>Loading event…</div>
-  if (error||!event) return <div style={{minHeight:'100vh',background:T.n100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}><div style={{color:T.red,fontFamily:'sans-serif',fontSize:13}}>{error??'Event not found'}</div><a href="/admin" style={{color:T.gold,fontFamily:'sans-serif',fontSize:11,textDecoration:'none'}}>← BACK TO ADMIN</a></div>
+  if (error||!event) return <div style={{minHeight:'100vh',background:T.n100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}><div style={{color:T.red,fontFamily:'sans-serif'}}>{error??'Not found'}</div><a href="/admin" style={{color:T.gold,fontFamily:'sans-serif',fontSize:11,textDecoration:'none'}}>← BACK</a></div>
 
   return (
     <div style={{fontFamily:"'Georgia',serif",background:T.n100,minHeight:'100vh'}}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes scanline{0%{top:20%}50%{top:80%}100%{top:20%}} *{box-sizing:border-box}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box}`}</style>
 
-      {/* Topbar — BACK goes to admin without logout */}
+      {/* Topbar */}
       <div style={{background:T.black,borderBottom:'1px solid #1A1A1A',padding:'0 16px',position:'sticky',top:0,zIndex:200}}>
         <div style={{maxWidth:1100,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:46}}>
           <button onClick={()=>router.push('/admin')} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:10,padding:0}}>
             <span style={{fontSize:14,fontWeight:700,color:T.gold,letterSpacing:'0.12em',fontFamily:"'Georgia',serif"}}>XINAO</span>
             <span style={{width:1,height:11,background:'#2A2520',display:'block'}}/>
-            <span style={{fontSize:8,color:T.n600,letterSpacing:'0.22em',fontFamily:'sans-serif'}}>ADMIN DASHBOARD</span>
+            <span style={{fontSize:8,color:T.n600,letterSpacing:'0.22em',fontFamily:'sans-serif'}}>ADMIN</span>
           </button>
-          {/* BACK button — does NOT logout, just goes back */}
-          <button onClick={()=>router.push('/admin')} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>
-            ← BACK
-          </button>
+          <button onClick={()=>router.push('/admin')} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>← BACK</button>
         </div>
       </div>
 
       <div style={{maxWidth:1100,margin:'0 auto',padding:'20px 16px'}}>
-        <button onClick={()=>router.push('/admin')} style={{background:'none',border:'none',color:T.gold,cursor:'pointer',fontSize:10,letterSpacing:'0.15em',fontFamily:'sans-serif',padding:0,marginBottom:12}}>
-          ← ALL EVENTS
-        </button>
+        <button onClick={()=>router.push('/admin')} style={{background:'none',border:'none',color:T.gold,cursor:'pointer',fontSize:10,letterSpacing:'0.15em',fontFamily:'sans-serif',padding:0,marginBottom:12}}>← ALL EVENTS</button>
 
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16,gap:10,flexWrap:'wrap'}}>
           <div>
@@ -350,10 +471,15 @@ export default function EventDetailPage() {
 
         {/* Tabs */}
         <div style={{display:'flex',borderBottom:`1px solid ${T.n200}`,marginBottom:18,overflowX:'auto'}}>
-          {(['overview','guests','scanner'] as const).map(t=>(
+          {(['overview','guests','requests','scanner'] as const).map(t=>(
             <button key={t} onClick={()=>{setTab(t);if(t!=='scanner') setCameraActive(false)}}
-              style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1,whiteSpace:'nowrap'}}>
+              style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1,whiteSpace:'nowrap',position:'relative'}}>
               {t.toUpperCase()}
+              {t==='requests' && pendingRequests > 0 && (
+                <span style={{position:'absolute',top:4,right:4,width:16,height:16,background:T.red,borderRadius:'50%',fontSize:9,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'sans-serif',fontWeight:700}}>
+                  {pendingRequests}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -368,6 +494,7 @@ export default function EventDetailPage() {
               </div>
               <div style={{height:3,background:T.n100,borderRadius:2}}><div style={{width:`${regPct}%`,height:'100%',background:`linear-gradient(90deg,${T.gold},${T.goldLight})`,borderRadius:2,transition:'width 0.8s'}}/></div>
             </div>
+
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:20}}>
               {STATS.map(s=>(
                 <div key={s.key} onClick={()=>{setStatusFilter(s.key);setTab('guests')}}
@@ -380,7 +507,36 @@ export default function EventDetailPage() {
                 </div>
               ))}
             </div>
+
+            {/* Pending requests alert */}
+            {pendingRequests > 0 && (
+              <div onClick={()=>setTab('requests')} style={{background:T.goldBg,border:`1px solid ${T.goldBorder}`,borderRadius:4,padding:'12px 16px',marginBottom:16,cursor:'pointer',display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontSize:18,color:T.gold}}>!</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.gold,fontFamily:'sans-serif',letterSpacing:'0.1em'}}>
+                    {pendingRequests} PENDING REGISTRATION REQUEST{pendingRequests!==1?'S':''}
+                  </div>
+                  <div style={{fontSize:11,color:T.gold,fontFamily:'sans-serif',marginTop:2}}>Click to review and approve or reject →</div>
+                </div>
+              </div>
+            )}
+
+            {/* Registration QR */}
+            {event.event_number && (
+              <div style={{marginBottom:20}}>
+                <RegistrationQR eventNumber={event.event_number} eventId={eventId}/>
+              </div>
+            )}
+            {!event.event_number && (
+              <div style={{background:T.n100,border:`1px dashed ${T.n200}`,borderRadius:4,padding:'14px 16px',marginBottom:20,textAlign:'center'}}>
+                <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif'}}>
+                  No event number set — add an event number to generate the public registration QR code.
+                </div>
+              </div>
+            )}
+
             {event.cover_image_url&&<div style={{marginBottom:16}}><div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:6}}>INVITATION TEMPLATE</div><img src={event.cover_image_url} alt="template" style={{width:'100%',maxHeight:160,objectFit:'cover',borderRadius:4,border:`1px solid ${T.n200}`}}/></div>}
+
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
               <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif'}}>RECENT REGISTRATIONS</div>
               <button onClick={()=>setShowAddGuest(true)} style={{padding:'6px 12px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700}}>+ ADD GUESTS</button>
@@ -406,7 +562,7 @@ export default function EventDetailPage() {
               <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
                 {['all','invited','registered','checked-in'].map(s=>(
                   <button key={s} onClick={()=>setStatusFilter(s)}
-                    style={{padding:'8px 10px',background:statusFilter===s?T.n800:T.white,color:statusFilter===s?T.white:T.n600,border:`1px solid ${statusFilter===s?T.n800:T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.06em',fontFamily:'sans-serif',fontWeight:statusFilter===s?700:400,whiteSpace:'nowrap'}}>
+                    style={{padding:'8px 10px',background:statusFilter===s?T.n800:T.white,color:statusFilter===s?T.white:T.n600,border:`1px solid ${statusFilter===s?T.n800:T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',fontWeight:statusFilter===s?700:400,whiteSpace:'nowrap'}}>
                     {s==='checked-in'?'✓ IN':s==='all'?'ALL':s.charAt(0).toUpperCase()+s.slice(1)}
                   </button>
                 ))}
@@ -417,12 +573,10 @@ export default function EventDetailPage() {
               <div style={{background:T.n800,borderRadius:4,padding:'10px 14px',marginBottom:10,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
                 <span style={{fontSize:11,color:T.white,fontFamily:'sans-serif',fontWeight:700}}>{selected.size} selected</span>
                 <div style={{display:'flex',gap:8,marginLeft:'auto',flexWrap:'wrap'}}>
-                  <button onClick={bulkSend} disabled={bulkSending} style={{padding:'7px 14px',background:T.gold,color:T.black,border:'none',borderRadius:2,cursor:bulkSending?'not-allowed':'pointer',fontSize:10,letterSpacing:'0.1em',fontFamily:'sans-serif',fontWeight:700}}>
+                  <button onClick={bulkSend} disabled={bulkSending} style={{padding:'7px 14px',background:T.gold,color:T.black,border:'none',borderRadius:2,cursor:'pointer',fontSize:10,fontFamily:'sans-serif',fontWeight:700}}>
                     {bulkSending?`✉ ${sendProgress?.done}/${sendProgress?.total}…`:`✉ SEND (${selected.size})`}
                   </button>
-                  <button onClick={()=>setDeleteConfirm({ids:Array.from(selected),count:selected.size})} style={{padding:'7px 14px',background:T.red,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:10,letterSpacing:'0.1em',fontFamily:'sans-serif',fontWeight:700}}>
-                    ✕ DELETE ({selected.size})
-                  </button>
+                  <button onClick={()=>setDeleteConfirm({ids:Array.from(selected),count:selected.size})} style={{padding:'7px 14px',background:T.red,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:10,fontFamily:'sans-serif',fontWeight:700}}>✕ DELETE ({selected.size})</button>
                   <button onClick={()=>setSelected(new Set())} style={{padding:'7px 10px',background:'none',border:'1px solid #3A3520',color:T.n400,borderRadius:2,cursor:'pointer',fontSize:10,fontFamily:'sans-serif'}}>Cancel</button>
                 </div>
               </div>
@@ -430,52 +584,42 @@ export default function EventDetailPage() {
 
             {sendProgress&&!bulkSending&&(
               <div style={{marginBottom:10,padding:'9px 13px',background:sendProgress.errors.length===0?T.greenBg:T.goldBg,border:`1px solid ${sendProgress.errors.length===0?T.greenBorder:T.goldBorder}`,borderRadius:3,fontSize:12,color:sendProgress.errors.length===0?T.green:T.gold,fontFamily:'sans-serif'}}>
-                {sendProgress.errors.length===0?`✓ ${sendProgress.total} invitation${sendProgress.total!==1?'s':''} sent.`:`✓ ${sendProgress.done-sendProgress.errors.length} sent. Failed: ${sendProgress.errors.join(', ')}`}
+                {sendProgress.errors.length===0?`✓ ${sendProgress.total} sent.`:`✓ ${sendProgress.done-sendProgress.errors.length} sent. Failed: ${sendProgress.errors.join(', ')}`}
               </div>
             )}
 
             <div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif',marginBottom:8}}>{sorted.length} guest{sorted.length!==1?'s':''}</div>
 
-            {/* ── MOBILE: card list ── */}
+            {/* Mobile cards */}
             {isMobile ? (
               <div style={{display:'flex',flexDirection:'column',gap:8}}>
                 {sorted.length===0&&<div style={{padding:'24px',textAlign:'center',color:T.n400,fontSize:12,fontFamily:'sans-serif',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4}}>No guests match.</div>}
                 {sorted.map(g=>(
                   <div key={g.id} style={{background:T.white,border:`1px solid ${selected.has(g.id)?T.gold:T.n200}`,borderRadius:4,overflow:'hidden'}}>
                     <div style={{padding:'12px 14px',display:'flex',alignItems:'flex-start',gap:10}}>
-                      <input type="checkbox" checked={selected.has(g.id)} onChange={()=>toggleOne(g.id)} style={{marginTop:3,flexShrink:0,width:16,height:16,cursor:'pointer'}}/>
+                      <input type="checkbox" checked={selected.has(g.id)} onChange={()=>toggleOne(g.id)} style={{marginTop:3,flexShrink:0,width:16,height:16}}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:15,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:600}}>{g.first_name} {g.last_name}</div>
                         {g.email&&<div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.email}</div>}
-                        <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6,flexWrap:'wrap'}}>
-                          <Badge status={g.status}/>
-                          {g.registered_at&&<span style={{fontSize:10,color:T.n400,fontFamily:'sans-serif'}}>{fmtDate(g.registered_at)}</span>}
-                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}><Badge status={g.status}/>{g.registered_at&&<span style={{fontSize:10,color:T.n400,fontFamily:'sans-serif'}}>{fmtDate(g.registered_at)}</span>}</div>
                       </div>
-                      <button onClick={()=>setPreview(preview===g.id?null:g.id)}
-                        style={{flexShrink:0,width:36,height:36,background:preview===g.id?T.n800:T.n100,border:`1px solid ${preview===g.id?T.n800:T.n200}`,borderRadius:3,cursor:'pointer',fontSize:14,color:preview===g.id?T.gold:T.n600,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <button onClick={()=>setPreview(preview===g.id?null:g.id)} style={{flexShrink:0,width:36,height:36,background:preview===g.id?T.n800:T.n100,border:`1px solid ${preview===g.id?T.n800:T.n200}`,borderRadius:3,cursor:'pointer',fontSize:14,color:preview===g.id?T.gold:T.n600,display:'flex',alignItems:'center',justifyContent:'center'}}>
                         {preview===g.id?'▲':'▼'}
                       </button>
                     </div>
-                    {/* Mobile action buttons */}
                     <div style={{display:'flex',gap:0,borderTop:`1px solid ${T.n100}`}}>
                       <button onClick={()=>setEditGuest(g)} style={{flex:1,padding:'10px',background:'none',border:'none',borderRight:`1px solid ${T.n100}`,cursor:'pointer',fontSize:11,color:T.n600,fontFamily:'sans-serif'}}>✎ Edit</button>
                       {g.email&&<button onClick={async()=>await sendEmail(g,event!)} style={{flex:1,padding:'10px',background:'none',border:'none',borderRight:`1px solid ${T.n100}`,cursor:'pointer',fontSize:11,color:T.gold,fontFamily:'sans-serif'}}>✉ Send</button>}
                       {g.status!=='checked-in'&&<button onClick={()=>checkIn(g.id)} style={{flex:1,padding:'10px',background:'none',border:'none',borderRight:`1px solid ${T.n100}`,cursor:'pointer',fontSize:11,color:T.green,fontFamily:'sans-serif',fontWeight:700}}>✓ IN</button>}
                       <button onClick={()=>setDeleteConfirm({ids:[g.id],count:1})} style={{flex:1,padding:'10px',background:'none',border:'none',cursor:'pointer',fontSize:11,color:T.red,fontFamily:'sans-serif',fontWeight:700}}>✕</button>
                     </div>
-                    {/* Expanded */}
                     {preview===g.id&&(
                       <div style={{padding:'16px 14px',background:'#F9F7F2',borderTop:`1px solid ${T.n100}`}}>
                         <div style={{display:'flex',justifyContent:'center',marginBottom:12}}><InvitationCard guest={g} event={event} showDownload/></div>
-                        <div style={{fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:5}}>SHORT CHECK-IN CODE</div>
-                        <div style={{fontSize:18,fontFamily:'monospace',fontWeight:700,color:T.gold,background:T.goldBg,padding:'6px 12px',borderRadius:3,letterSpacing:'0.15em',display:'inline-block',marginBottom:10}}>
-                          {g.qr_token.slice(0,8).toUpperCase()}
-                        </div>
-                        <div style={{fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:5,marginTop:8}}>INVITATION LINK</div>
+                        <div style={{fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>INVITATION LINK</div>
                         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
                           <code style={{fontSize:10,color:T.gold,background:T.n100,padding:'4px 7px',borderRadius:2,wordBreak:'break-all'}}>{SITE}/invite/{eventId}/{g.guest_token}</code>
-                          <button onClick={()=>navigator.clipboard.writeText(`${SITE}/invite/${eventId}/${g.guest_token}`)} style={{padding:'5px 10px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',color:T.n600,flexShrink:0}}>COPY</button>
+                          <button onClick={()=>navigator.clipboard.writeText(`${SITE}/invite/${eventId}/${g.guest_token}`)} style={{padding:'5px 10px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',color:T.n600}}>COPY</button>
                         </div>
                       </div>
                     )}
@@ -483,13 +627,13 @@ export default function EventDetailPage() {
                 ))}
               </div>
             ) : (
-              /* ── DESKTOP: table ── */
+              /* Desktop table */
               <div style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,overflow:'hidden'}}>
                 <div style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr 110px 100px 70px 36px',padding:'9px 14px',borderBottom:`1px solid ${T.n100}`,background:T.n100,gap:8,alignItems:'center'}}>
                   <input type="checkbox" checked={allChecked} onChange={()=>toggleAll(sorted)} style={{cursor:'pointer',width:13,height:13}}/>
-                  <SortCol k="last_name"     label="LAST NAME"/>
-                  <SortCol k="first_name"    label="FIRST NAME"/>
-                  <SortCol k="status"        label="STATUS"/>
+                  <SortCol k="last_name" label="LAST NAME"/>
+                  <SortCol k="first_name" label="FIRST NAME"/>
+                  <SortCol k="status" label="STATUS"/>
                   <SortCol k="registered_at" label="REG."/>
                   <div style={{fontSize:8,letterSpacing:'0.12em',color:T.n400,fontFamily:'sans-serif',fontWeight:700}}>ACTIONS</div>
                   <div/>
@@ -504,41 +648,34 @@ export default function EventDetailPage() {
                       <div style={{display:'flex',alignItems:'center'}}><Badge status={g.status}/></div>
                       <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',whiteSpace:'nowrap'}}>{fmtDate(g.registered_at)}</div>
                       <div style={{display:'flex',gap:3}}>
-                        <button onClick={()=>setEditGuest(g)} title="Edit" style={{width:28,height:26,background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,color:T.n600,display:'flex',alignItems:'center',justifyContent:'center'}}>✎</button>
-                        {g.email&&<button onClick={async()=>await sendEmail(g,event!)} title="Send email" style={{width:28,height:26,background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,color:T.gold,display:'flex',alignItems:'center',justifyContent:'center'}}>✉</button>}
-                        <button onClick={()=>setDeleteConfirm({ids:[g.id],count:1})} title="Delete" style={{width:28,height:26,background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,color:T.red,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+                        <button onClick={()=>setEditGuest(g)} style={{width:28,height:26,background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,color:T.n600,display:'flex',alignItems:'center',justifyContent:'center'}}>✎</button>
+                        {g.email&&<button onClick={async()=>await sendEmail(g,event!)} style={{width:28,height:26,background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,color:T.gold,display:'flex',alignItems:'center',justifyContent:'center'}}>✉</button>}
+                        <button onClick={()=>setDeleteConfirm({ids:[g.id],count:1})} style={{width:28,height:26,background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,color:T.red,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
                       </div>
-                      <button onClick={()=>setPreview(preview===g.id?null:g.id)} style={{width:34,height:30,background:preview===g.id?T.n800:T.white,border:`1px solid ${preview===g.id?T.n800:T.n200}`,borderRadius:3,cursor:'pointer',fontSize:12,color:preview===g.id?T.gold:T.n600,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                      <button onClick={()=>setPreview(preview===g.id?null:g.id)} style={{width:34,height:30,background:preview===g.id?T.n800:T.white,border:`1px solid ${preview===g.id?T.n800:T.n200}`,borderRadius:3,cursor:'pointer',fontSize:12,color:preview===g.id?T.gold:T.n600,display:'flex',alignItems:'center',justifyContent:'center'}}>
                         {preview===g.id?'▲':'▼'}
                       </button>
                     </div>
                     {preview===g.id&&(
                       <div style={{padding:'18px 16px',background:'#F9F7F2',borderBottom:`1px solid ${T.n100}`}}>
-                        <div style={{fontSize:8,letterSpacing:'0.25em',color:T.n400,fontFamily:'sans-serif',marginBottom:14}}>INVITATION — {g.first_name.toUpperCase()} {g.last_name.toUpperCase()}</div>
-                        <div style={{display:'flex',gap:24,flexWrap:'wrap',alignItems:'flex-start'}}>
+                        <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
                           <InvitationCard guest={g} event={event} showDownload/>
-                          <div style={{display:'flex',flexDirection:'column',gap:11,minWidth:200,flex:1}}>
+                          <div style={{display:'flex',flexDirection:'column',gap:10,minWidth:200,flex:1}}>
                             {[['EMAIL',g.email??'—'],['PHONE',g.phone??'—']].map(([l,v])=>(
-                              <div key={l}><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:3}}>{l}</div><div style={{fontSize:12,color:T.n800,fontFamily:'sans-serif'}}>{v}</div></div>
+                              <div key={l}><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:2}}>{l}</div><div style={{fontSize:12,color:T.n800,fontFamily:'sans-serif'}}>{v}</div></div>
                             ))}
-                            <div><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:5}}>STATUS</div><Badge status={g.status}/></div>
-                            {g.registered_at&&<div><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:3}}>REGISTERED</div><div style={{fontSize:12,color:T.n800,fontFamily:'sans-serif'}}>{fmtDate(g.registered_at)} {fmtTime(g.registered_at)}</div></div>}
-                            {g.checked_in_at&&<div><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:3}}>CHECKED IN</div><div style={{fontSize:12,color:T.gold,fontWeight:700,fontFamily:'sans-serif'}}>{fmtDate(g.checked_in_at)} {fmtTime(g.checked_in_at)}</div></div>}
+                            <div><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>SHORT CODE</div><div style={{fontSize:16,fontFamily:'monospace',fontWeight:700,color:T.gold,background:T.goldBg,padding:'5px 10px',borderRadius:3,letterSpacing:'0.15em',display:'inline-block'}}>{g.qr_token.slice(0,8).toUpperCase()}</div></div>
                             <div>
-                              <div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:5}}>SHORT CODE</div>
-                              <div style={{fontSize:16,fontFamily:'monospace',fontWeight:700,color:T.gold,background:T.goldBg,padding:'5px 10px',borderRadius:3,letterSpacing:'0.15em',display:'inline-block'}}>{g.qr_token.slice(0,8).toUpperCase()}</div>
-                            </div>
-                            <div>
-                              <div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:5}}>INVITATION LINK</div>
+                              <div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>INVITATION LINK</div>
                               <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
-                                <code style={{fontSize:10,color:T.gold,background:T.n100,padding:'4px 8px',borderRadius:2,wordBreak:'break-all'}}>{SITE}/invite/{eventId}/{g.guest_token}</code>
-                                <button onClick={()=>navigator.clipboard.writeText(`${SITE}/invite/${eventId}/${g.guest_token}`)} style={{padding:'4px 10px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',color:T.n600,flexShrink:0}}>COPY</button>
+                                <code style={{fontSize:10,color:T.gold,background:T.n100,padding:'4px 7px',borderRadius:2,wordBreak:'break-all'}}>{SITE}/invite/{eventId}/{g.guest_token}</code>
+                                <button onClick={()=>navigator.clipboard.writeText(`${SITE}/invite/${eventId}/${g.guest_token}`)} style={{padding:'4px 9px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',color:T.n600}}>COPY</button>
                               </div>
                             </div>
-                            <div style={{display:'flex',gap:8,marginTop:4,flexWrap:'wrap'}}>
-                              {g.status==='registered'&&<button onClick={()=>{checkIn(g.id);setPreview(null)}} style={{padding:'8px 14px',background:T.n800,color:T.gold,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.12em',fontFamily:'sans-serif'}}>✓ CHECK IN</button>}
-                              {g.status==='invited'&&<button onClick={()=>{checkIn(g.id);setPreview(null)}} style={{padding:'8px 14px',background:T.green,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.12em',fontFamily:'sans-serif'}}>✓ FORCE CHECK IN</button>}
-                              {g.email&&<button onClick={()=>sendEmail(g,event!)} style={{padding:'8px 14px',background:'none',border:`1px solid ${T.gold}`,color:T.gold,borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.12em',fontFamily:'sans-serif'}}>✉ SEND EMAIL</button>}
+                            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                              {g.status==='registered'&&<button onClick={()=>{checkIn(g.id);setPreview(null)}} style={{padding:'7px 13px',background:T.n800,color:T.gold,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif'}}>✓ CHECK IN</button>}
+                              {g.status==='invited'&&<button onClick={()=>{checkIn(g.id);setPreview(null)}} style={{padding:'7px 13px',background:T.green,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif'}}>✓ FORCE IN</button>}
+                              {g.email&&<button onClick={()=>sendEmail(g,event!)} style={{padding:'7px 13px',background:'none',border:`1px solid ${T.gold}`,color:T.gold,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif'}}>✉ SEND</button>}
                             </div>
                           </div>
                         </div>
@@ -551,13 +688,51 @@ export default function EventDetailPage() {
           </div>
         )}
 
+        {/* ── REQUESTS ── */}
+        {tab==='requests'&&(
+          <div>
+            <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
+              <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginRight:4}}>FILTER:</div>
+              {['pending','approved','rejected','all'].map(s=>(
+                <button key={s} onClick={()=>setReqFilter(s)}
+                  style={{padding:'7px 12px',background:reqFilter===s?T.n800:T.white,color:reqFilter===s?T.white:T.n600,border:`1px solid ${reqFilter===s?T.n800:T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',fontWeight:reqFilter===s?700:400,whiteSpace:'nowrap',position:'relative'}}>
+                  {s.charAt(0).toUpperCase()+s.slice(1)}
+                  {s==='pending' && pendingRequests > 0 && (
+                    <span style={{marginLeft:6,background:T.red,color:'#fff',borderRadius:10,padding:'1px 5px',fontSize:9,fontWeight:700}}>{pendingRequests}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif',marginBottom:10}}>{filteredRequests.length} request{filteredRequests.length!==1?'s':''}</div>
+
+            {filteredRequests.length === 0 ? (
+              <div style={{padding:'32px',textAlign:'center',color:T.n400,fontSize:13,fontFamily:'sans-serif',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4}}>
+                {reqFilter === 'pending' ? 'No pending requests.' : `No ${reqFilter} requests.`}
+              </div>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {filteredRequests.map(req=>(
+                  <RequestCard
+                    key={req.id}
+                    req={req}
+                    loading={reviewLoading === req.id}
+                    onApprove={() => reviewRequest(req.id, 'approve')}
+                    onReject={() => reviewRequest(req.id, 'reject')}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── SCANNER ── */}
         {tab==='scanner'&&(
           <div style={{maxWidth:400,margin:'0 auto',paddingTop:12}}>
             <div style={{textAlign:'center',marginBottom:16}}>
               <div style={{fontSize:9,color:T.gold,letterSpacing:'0.3em',fontFamily:'sans-serif',marginBottom:3}}>QR SCANNER</div>
               <div style={{fontSize:16,fontFamily:"'Georgia',serif",fontWeight:700,color:T.n800}}>{event.name}</div>
-              <div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif',marginTop:2}}>{guests.filter(g=>g.status==='registered').length} waiting · {guests.filter(g=>g.status==='checked-in').length} checked in</div>
+              <div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif',marginTop:2}}>{guests.filter(g=>g.status==='registered').length} waiting · {guests.filter(g=>g.status==='checked-in').length} in</div>
             </div>
             <QRScanner active={cameraActive} onScan={(raw)=>{handleScan(raw);setCameraActive(false)}}/>
             <button onClick={()=>{setScanResult(null);setCameraActive(a=>!a)}}
@@ -565,7 +740,7 @@ export default function EventDetailPage() {
               {cameraActive?'⬛ STOP CAMERA':'📷 START CAMERA'}
             </button>
             <div style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,padding:16,marginBottom:14}}>
-              <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:8}}>MANUAL CHECK-IN — SHORT CODE</div>
+              <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:8}}>MANUAL — SHORT CODE</div>
               <div style={{display:'flex',gap:7}}>
                 <input value={manualCode} onChange={e=>setManualCode(e.target.value.toUpperCase())} placeholder="e.g. A1B2C3D4"
                   onKeyDown={e=>{if(e.key==='Enter'){handleScan(manualCode);setManualCode('')}}}
@@ -588,7 +763,6 @@ export default function EventDetailPage() {
                 </div>
               )
             })()}
-            {/* Quick guest list */}
             <div style={{fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:8}}>GUEST LIST</div>
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
               {guests.map(g=>(
@@ -599,7 +773,7 @@ export default function EventDetailPage() {
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <Badge status={g.status}/>
-                    {g.status!=='checked-in'&&<button onClick={()=>checkIn(g.id)} style={{padding:'5px 10px',background:T.green,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.1em',fontFamily:'sans-serif',fontWeight:700}}>✓ IN</button>}
+                    {g.status!=='checked-in'&&<button onClick={()=>checkIn(g.id)} style={{padding:'5px 10px',background:T.green,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',fontWeight:700}}>✓ IN</button>}
                   </div>
                 </div>
               ))}
@@ -609,10 +783,10 @@ export default function EventDetailPage() {
       </div>
 
       {deleteConfirm&&<ConfirmModal title="Delete" message={deleteConfirm.count===1?'Delete this guest?':`Delete ${deleteConfirm.count} guests?`} onConfirm={()=>deleteGuests(deleteConfirm.ids)} onCancel={()=>setDeleteConfirm(null)} danger/>}
-      {editGuest&&<EditGuestModal guest={editGuest} onSave={saveGuestEdit} onClose={()=>setEditGuest(null)}/> }
+      {editGuest&&<EditGuestModal guest={editGuest} onSave={saveGuestEdit} onClose={()=>setEditGuest(null)}/>}
       {showAddGuest&&<AddGuestModal eventId={eventId} onDone={load} onClose={()=>setShowAddGuest(false)}/>}
       {error&&(
-        <div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',background:T.red,color:T.white,padding:'10px 20px',borderRadius:4,fontSize:12,fontFamily:'sans-serif',zIndex:500,boxShadow:'0 4px 20px rgba(0,0,0,0.2)',maxWidth:'90vw',textAlign:'center'}}>
+        <div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',background:T.red,color:T.white,padding:'10px 20px',borderRadius:4,fontSize:12,fontFamily:'sans-serif',zIndex:500,maxWidth:'90vw',textAlign:'center'}}>
           ⚠ {error}
           <button onClick={()=>setError(null)} style={{marginLeft:12,background:'none',border:'none',color:T.white,cursor:'pointer',fontSize:14}}>✕</button>
         </div>
