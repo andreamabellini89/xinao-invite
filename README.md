@@ -4,7 +4,7 @@ Event invitation management — Next.js 14 + Supabase + Vercel.
 
 ---
 
-## What it does
+## What it does Test
 
 | Role | Path | Description |
 |------|------|-------------|
