@@ -12,6 +12,7 @@ export interface XinaoEvent {
   description: string | null
   status: EventStatus
   cover_image_url: string | null
+  event_number: string | null
   created_at: string
   updated_at: string
 }
