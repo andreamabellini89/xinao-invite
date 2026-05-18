@@ -226,8 +226,13 @@ export default function AdminPage() {
       let img=form.cover_image_url
       if(editEvt){
         if(img?.startsWith('data:')) img=await uploadImage(img,editEvt.id)
-        const {error}=await supabase.from('events').update({...form,cover_image_url:img,updated_at:new Date().toISOString()}).eq('id',editEvt.id)
-        if(error) throw error
+        const base={name:form.name,subtitle:form.subtitle||null,date:form.date,time:form.time,location:form.location,address:form.address||null,description:form.description||null,status:form.status,cover_image_url:img,updated_at:new Date().toISOString()}
+        const {error}=await supabase.from('events').update({...base,event_number:form.event_number||null}).eq('id',editEvt.id)
+        if(error?.code==='42703'){
+          // event_number column not yet in DB (run migration.sql) — save without it
+          const {error:e2}=await supabase.from('events').update(base).eq('id',editEvt.id)
+          if(e2) throw e2
+        } else if(error) throw error
       } else {
         const {data,error}=await supabase.from('events').insert({name:form.name,subtitle:form.subtitle||null,date:form.date,time:form.time,location:form.location,address:form.address||null,description:form.description||null,status:form.status,cover_image_url:null,event_number:form.event_number||null}).select().single()
         if(error) throw error
