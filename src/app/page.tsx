@@ -121,8 +121,8 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
 
 // ── Event Form Modal ──────────────────────────────────────────────────────────
 function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null; onSave:(f:EventFormData)=>Promise<void>; onClose:()=>void }) {
-  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null}
-  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url}:blank)
+  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null,event_number:''}
+  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??''}:blank)
   const [saving, setSaving] = useState(false)
   const set = (k:keyof EventFormData, v:string|null) => setForm(f=>({...f,[k]:v}))
   const valid = form.name && form.date && form.location
