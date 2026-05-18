@@ -8,8 +8,8 @@ import { createClient } from '@supabase/supabase-js'
 import type { XinaoEvent, EventFormData } from '@/types'
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
 )
 const ADMIN_PWD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? 'xinao2026'
 const SESSION_KEY = 'xinao_admin_auth'

@@ -7,8 +7,8 @@ import { createClient } from '@supabase/supabase-js'
 import type { XinaoEvent, Guest } from '@/types'
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
 )
 
 interface Form { firstName:string; lastName:string; email:string; phone:string; consent:boolean }

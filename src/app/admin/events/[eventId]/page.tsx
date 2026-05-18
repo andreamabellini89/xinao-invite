@@ -10,8 +10,8 @@ import { createClient } from '@supabase/supabase-js'
 import type { XinaoEvent, Guest } from '@/types'
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
 )
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-events.com'
 
