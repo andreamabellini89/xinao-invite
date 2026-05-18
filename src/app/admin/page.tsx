@@ -13,6 +13,7 @@ const supabase = createClient(
 )
 const ADMIN_PWD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? 'xinao2026'
 const SESSION_KEY = 'xinao_admin_auth'
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-events.com'
 
 async function uploadImage(dataUrl: string, eventId: string): Promise<string|null> {
   const res  = await fetch(dataUrl)
@@ -121,8 +122,8 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
 
 // ── Event Form Modal ──────────────────────────────────────────────────────────
 function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null; onSave:(f:EventFormData)=>Promise<void>; onClose:()=>void }) {
-  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null}
-  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url}:blank)
+  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null,event_number:''}
+  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??''}:blank)
   const [saving, setSaving] = useState(false)
   const set = (k:keyof EventFormData, v:string|null) => setForm(f=>({...f,[k]:v}))
   const valid = form.name && form.date && form.location
@@ -138,7 +139,7 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:T.n400}}>✕</button>
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          {([['Event Name *','name'],['Subtitle / Edition','subtitle'],['Date *','date','24 JUNE 2026'],['Time *','time','8:00 PM'],['Venue / Location *','location'],['Full Address','address'],['Description / Tagline','description']] as [string,keyof EventFormData,string?][]).map(([label,key,ph])=>(
+          {([['Event Name *','name'],['Subtitle / Edition','subtitle'],['Date *','date','24 JUNE 2026'],['Time *','time','8:00 PM'],['Venue / Location *','location'],['Full Address','address'],['Description / Tagline','description'],['Event Number (e.g. 01)','event_number','01']] as [string,keyof EventFormData,string?][]).map(([label,key,ph])=>(
             <div key={key}>
               <label style={{display:'block',fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:5}}>{label.toUpperCase()}</label>
               <input value={form[key] as string??''} placeholder={ph??''} onChange={e=>set(key,e.target.value)} style={{width:'100%',padding:'10px 13px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',background:T.white,boxSizing:'border-box'}}/>
@@ -179,6 +180,7 @@ export default function AdminPage() {
   const [delEvt,     setDelEvt]     = useState<XinaoEvent|null>(null)
   const [addGuestEvt,setAddGuestEvt]= useState<string|null>(null)
   const [menuOpen,   setMenuOpen]   = useState<string|null>(null)
+  const [copiedId,   setCopiedId]   = useState<string|null>(null)
   const [sortKey,    setSortKey]    = useState<'name'|'date'|'status'>('name')
   const [sortDir,    setSortDir]    = useState<'asc'|'desc'>('asc')
 
@@ -227,7 +229,7 @@ export default function AdminPage() {
         const {error}=await supabase.from('events').update({...form,cover_image_url:img,updated_at:new Date().toISOString()}).eq('id',editEvt.id)
         if(error) throw error
       } else {
-        const {data,error}=await supabase.from('events').insert({name:form.name,subtitle:form.subtitle||null,date:form.date,time:form.time,location:form.location,address:form.address||null,description:form.description||null,status:form.status,cover_image_url:null}).select().single()
+        const {data,error}=await supabase.from('events').insert({name:form.name,subtitle:form.subtitle||null,date:form.date,time:form.time,location:form.location,address:form.address||null,description:form.description||null,status:form.status,cover_image_url:null,event_number:form.event_number||null}).select().single()
         if(error) throw error
         if(img?.startsWith('data:')){img=await uploadImage(img,data.id);if(img) await supabase.from('events').update({cover_image_url:img}).eq('id',data.id)}
       }
@@ -242,6 +244,21 @@ export default function AdminPage() {
     const {error}=await supabase.from('events').delete().eq('id',delEvt.id)
     if(error){ setError(error.message); return }
     setDelEvt(null); await loadEvents()
+  }
+
+  const copyRegLink=(evt:XinaoEvent)=>{
+    if(!evt.event_number) return
+    navigator.clipboard.writeText(`${SITE}/registration/${evt.event_number}`)
+    setCopiedId(evt.id); setTimeout(()=>setCopiedId(null),2000)
+  }
+
+  const downloadRegQR=async(evt:XinaoEvent)=>{
+    if(!evt.event_number) return
+    try {
+      const QRCode=(await import('qrcode')).default
+      const url=await QRCode.toDataURL(`${SITE}/registration/${evt.event_number}`,{width:400,margin:2,color:{dark:'#1A1008',light:'#FFFFFF'},errorCorrectionLevel:'H'})
+      const a=document.createElement('a'); a.download=`xinao-qr-${evt.event_number}.png`; a.href=url; a.click()
+    } catch(e){console.error(e)}
   }
 
   const dupEvent=async(evt:XinaoEvent)=>{
@@ -315,7 +332,7 @@ export default function AdminPage() {
             const c=counts[evt.id]??{total:0,reg:0,in:0}
             const pct=c.total?Math.round(c.reg/c.total*100):0
             return(
-              <div key={evt.id} style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,overflow:'visible',position:'relative'}}>
+              <div key={evt.id} style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,overflow:'visible',position:'relative',zIndex:menuOpen===evt.id?10:undefined}}>
                 {evt.cover_image_url&&<img src={evt.cover_image_url} alt="" style={{width:'100%',height:80,objectFit:'cover',display:'block'}}/>}
                 <div style={{height:3,background:`linear-gradient(90deg,${T.gold} ${pct}%,${T.n200} ${pct}%)`}}/>
                 <div style={{padding:'14px',cursor:'pointer'}} onClick={()=>router.push(`/admin/events/${evt.id}`)}>
@@ -339,6 +356,16 @@ export default function AdminPage() {
                       <button onClick={()=>{setMenuOpen(null);setEditEvt(evt);setFormOpen(true)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.n800,textAlign:'left'}}>✎  Edit</button>
                       <button onClick={()=>{setMenuOpen(null);setAddGuestEvt(evt.id)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.n800,textAlign:'left'}}>+ Add Guests</button>
                       <button onClick={()=>{setMenuOpen(null);dupEvent(evt)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.n800,textAlign:'left'}}>⧉  Duplicate</button>
+                      {evt.event_number?(
+                        <>
+                          <button onClick={()=>{setMenuOpen(null);copyRegLink(evt)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.gold,textAlign:'left'}}>
+                            {copiedId===evt.id?'✓  Copied!':'⊞  Copy Reg. Link'}
+                          </button>
+                          <button onClick={()=>{setMenuOpen(null);downloadRegQR(evt)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',borderBottom:`1px solid ${T.n100}`,cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.gold,textAlign:'left'}}>⬇  Download QR</button>
+                        </>
+                      ):(
+                        <div style={{display:'block',width:'100%',padding:'10px 14px',borderBottom:`1px solid ${T.n100}`,fontSize:11,fontFamily:'sans-serif',color:T.n300,cursor:'default'}}>⊞  Set event number for QR</div>
+                      )}
                       <button onClick={()=>{setMenuOpen(null);setDelEvt(evt)}} style={{display:'block',width:'100%',padding:'10px 14px',background:'none',border:'none',cursor:'pointer',fontSize:12,fontFamily:'sans-serif',color:T.red,textAlign:'left',fontWeight:700}}>✕  Delete Event</button>
                     </div>
                   )}

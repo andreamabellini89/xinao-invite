@@ -50,4 +50,5 @@ export interface EventFormData {
   description: string
   status: EventStatus
   cover_image_url: string | null
+  event_number: string
 }

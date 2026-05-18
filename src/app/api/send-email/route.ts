@@ -86,9 +86,15 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         from: FROM,
         to:   [guest.email],
+        reply_to: FROM,
         subject: `Your invitation — ${event.name}`,
         html,
         text,
+        headers: {
+          'X-Mailer': 'XINAO Events Platform',
+          'List-Unsubscribe': `<mailto:unsubscribe@xinao-events.com?subject=Unsubscribe>`,
+          'Precedence': 'bulk',
+        },
       }),
     })
 

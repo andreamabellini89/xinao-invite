@@ -314,13 +314,18 @@ export default function EventDetailPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const [{ data:evt }, { data:gsts }, { data:reqs }] = await Promise.all([
+      const [{ data:evt, error:evtErr }, { data:gsts }] = await Promise.all([
         supabase.from('events').select('*').eq('id', eventId).single(),
         supabase.from('guests').select('*').eq('event_id', eventId).order('last_name'),
-        supabase.from('registration_requests').select('*').eq('event_id', eventId).order('created_at', { ascending: false }),
       ])
-      setEvent(evt); setGuests(gsts ?? []); setRequests(reqs ?? [])
+      if (evtErr) throw evtErr
+      setEvent(evt); setGuests(gsts ?? [])
     } catch (e:any) { setError(e.message) }
+    // registration_requests may not exist yet — load separately, fail silently
+    try {
+      const { data:reqs } = await supabase.from('registration_requests').select('*').eq('event_id', eventId).order('created_at', { ascending: false })
+      setRequests(reqs ?? [])
+    } catch { setRequests([]) }
     setLoading(false)
   }, [eventId])
 
@@ -542,13 +547,13 @@ export default function EventDetailPage() {
               <button onClick={()=>setShowAddGuest(true)} style={{padding:'6px 12px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700}}>+ ADD GUESTS</button>
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              {guests.filter(g=>g.registered_at).sort((a,b)=>new Date(b.registered_at!).getTime()-new Date(a.registered_at!).getTime()).slice(0,5).map(g=>(
+              {guests.filter(g=>g.status!=='invited').sort((a,b)=>new Date(b.registered_at??b.created_at).getTime()-new Date(a.registered_at??a.created_at).getTime()).slice(0,5).map(g=>(
                 <div key={g.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,padding:'10px 14px',gap:8,flexWrap:'wrap'}}>
                   <div><div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n800}}>{g.first_name} {g.last_name}</div><div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif'}}>{g.email}</div></div>
                   <div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:10,color:T.n400,fontFamily:'sans-serif'}}>{fmtDate(g.registered_at)}</span><Badge status={g.status}/></div>
                 </div>
               ))}
-              {!guests.filter(g=>g.registered_at).length&&<div style={{padding:'20px',textAlign:'center',color:T.n400,fontSize:12,fontFamily:'sans-serif',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4}}>No registrations yet.</div>}
+              {!guests.filter(g=>g.status!=='invited').length&&<div style={{padding:'20px',textAlign:'center',color:T.n400,fontSize:12,fontFamily:'sans-serif',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4}}>No registrations yet.</div>}
             </div>
           </div>
         )}

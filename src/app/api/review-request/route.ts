@@ -68,8 +68,14 @@ async function sendApprovalEmail(guest: any, event: any, inviteUrl: string) {
     body: JSON.stringify({
       from: FROM,
       to: [guest.email],
+      reply_to: FROM,
       subject: `Your invitation is confirmed — ${event.name}`,
       html,
+      headers: {
+        'X-Mailer': 'XINAO Events Platform',
+        'List-Unsubscribe': `<mailto:unsubscribe@xinao-events.com?subject=Unsubscribe>`,
+        'Precedence': 'bulk',
+      },
     }),
   })
   return res.ok
