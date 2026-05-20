@@ -332,7 +332,7 @@ export default function AdminPage() {
             const c=counts[evt.id]??{total:0,reg:0,in:0}
             const pct=c.total?Math.round(c.reg/c.total*100):0
             return(
-              <div key={evt.id} style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,overflow:'visible',position:'relative',zIndex:menuOpen===evt.id?10:undefined}}>
+              <div key={evt.id} style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,overflow:'visible',position:'relative',zIndex:menuOpen===evt.id?100:undefined}}>
                 {evt.cover_image_url&&<img src={evt.cover_image_url} alt="" style={{width:'100%',height:80,objectFit:'cover',display:'block'}}/>}
                 <div style={{height:3,background:`linear-gradient(90deg,${T.gold} ${pct}%,${T.n200} ${pct}%)`}}/>
                 <div style={{padding:'14px',cursor:'pointer'}} onClick={()=>router.push(`/admin/events/${evt.id}`)}>
