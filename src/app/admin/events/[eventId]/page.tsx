@@ -479,12 +479,14 @@ export default function EventDetailPage() {
           {(['overview','guests','requests','scanner'] as const).map(t=>(
             <button key={t} onClick={()=>{setTab(t);if(t!=='scanner') setCameraActive(false)}}
               style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1,whiteSpace:'nowrap',position:'relative'}}>
-              {t.toUpperCase()}
-              {t==='requests' && pendingRequests > 0 && (
-                <span style={{position:'absolute',top:4,right:4,width:16,height:16,background:T.red,borderRadius:'50%',fontSize:9,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'sans-serif',fontWeight:700}}>
-                  {pendingRequests}
-                </span>
-              )}
+              <span style={{display:'inline-flex',alignItems:'center',gap:5}}>
+                {t.toUpperCase()}
+                {t==='requests' && pendingRequests > 0 && (
+                  <span style={{width:16,height:16,background:T.red,borderRadius:'50%',fontSize:9,color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',fontFamily:'sans-serif',fontWeight:700,flexShrink:0}}>
+                    {pendingRequests}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>
