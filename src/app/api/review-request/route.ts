@@ -114,27 +114,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, action: 'rejected' })
     }
 
-    // APPROVE — create guest and send invitation
+    // APPROVE — create guest (or reuse existing) and send invitation
     const { v4: uuid } = await require('uuid')
     const guestToken = uuid()
     const qrToken    = uuid()
 
-    const { data: guest, error: guestErr } = await supabase
-      .from('guests')
-      .insert({
-        event_id:    event.id,
-        first_name:  request.first_name,
-        last_name:   request.last_name,
-        email:       request.email,
-        phone:       request.phone,
-        guest_token: guestToken,
-        qr_token:    qrToken,
-        status:      'invited',
-      })
-      .select()
-      .single()
+    // Check if a guest with this email already exists for this event
+    const { data: existingGuest } = request.email
+      ? await supabase.from('guests').select('*').eq('event_id', event.id).eq('email', request.email).maybeSingle()
+      : { data: null }
 
-    if (guestErr) throw guestErr
+    let guest: any
+    if (existingGuest) {
+      // Reuse existing guest — update tokens so they get a fresh invite link
+      const { data: updated, error: updateErr } = await supabase
+        .from('guests')
+        .update({ guest_token: guestToken, qr_token: qrToken, status: 'invited', updated_at: new Date().toISOString() })
+        .eq('id', existingGuest.id)
+        .select()
+        .single()
+      if (updateErr) throw updateErr
+      guest = updated
+    } else {
+      const { data: inserted, error: guestErr } = await supabase
+        .from('guests')
+        .insert({
+          event_id:    event.id,
+          first_name:  request.first_name,
+          last_name:   request.last_name,
+          email:       request.email || null,
+          phone:       request.phone || null,
+          company:     request.company || null,
+          guest_token: guestToken,
+          qr_token:    qrToken,
+          status:      'invited',
+        })
+        .select()
+        .single()
+      if (guestErr) throw guestErr
+      guest = inserted
+    }
 
     // Update request as approved
     await supabase.from('registration_requests').update({
@@ -143,9 +162,9 @@ export async function POST(req: NextRequest) {
       guest_id:    guest.id,
     }).eq('id', requestId)
 
-    // Send approval email
+    // Send approval email (only if guest has an email address)
     const inviteUrl = `${SITE}/invite/${event.id}/${guestToken}`
-    const emailSent = await sendApprovalEmail(guest, event, inviteUrl)
+    const emailSent = guest.email ? await sendApprovalEmail(guest, event, inviteUrl) : false
 
     return NextResponse.json({
       success: true,

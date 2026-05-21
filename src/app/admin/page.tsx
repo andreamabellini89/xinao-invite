@@ -29,7 +29,7 @@ async function uploadImage(dataUrl: string, eventId: string): Promise<string|nul
 // ── Add Guest Modal ───────────────────────────────────────────────────────────
 function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()=>void; onClose:()=>void }) {
   const [tab,    setTab]    = useState<'single'|'csv'>('single')
-  const [form,   setForm]   = useState({ first_name:'', last_name:'', email:'', phone:'' })
+  const [form,   setForm]   = useState({ first_name:'', last_name:'', company:'', email:'', phone:'' })
   const [csv,    setCsv]    = useState('')
   const [saving, setSaving] = useState(false)
   const [msg,    setMsg]    = useState('')
@@ -40,7 +40,7 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
     const { v4: uuid } = await import('uuid')
     const { error } = await supabase.from('guests').insert({
       event_id: eventId, first_name:form.first_name.trim(), last_name:form.last_name.trim(),
-      email:form.email.trim()||null, phone:form.phone.trim()||null,
+      company:form.company.trim()||null, email:form.email.trim()||null, phone:form.phone.trim()||null,
       guest_token:uuid(), qr_token:uuid(), status:'invited',
     })
     setSaving(false)
@@ -87,6 +87,10 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
                   <input value={form[f]} onChange={e=>setForm(x=>({...x,[f]:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',boxSizing:'border-box'}}/>
                 </div>
               ))}
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>COMPANY</label>
+              <input value={form.company} onChange={e=>setForm(x=>({...x,company:e.target.value}))} style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',boxSizing:'border-box'}}/>
             </div>
             {(['email','phone'] as const).map(f=>(
               <div key={f}>

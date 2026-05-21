@@ -44,3 +44,17 @@ CREATE POLICY "Public can insert requests"  ON registration_requests FOR INSERT 
 CREATE POLICY "Public can read requests"    ON registration_requests FOR SELECT USING (true);
 CREATE POLICY "Authenticated can update"    ON registration_requests FOR UPDATE USING (true);
 CREATE POLICY "Authenticated can delete"    ON registration_requests FOR DELETE USING (true);
+
+-- ============================================================
+-- MIGRATION 2 — Company field + optional email
+-- Run this if the tables above already exist
+-- ============================================================
+
+-- Add company to guests
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS company TEXT;
+
+-- Add company to registration_requests
+ALTER TABLE registration_requests ADD COLUMN IF NOT EXISTS company TEXT;
+
+-- Make email optional in registration_requests (was NOT NULL)
+ALTER TABLE registration_requests ALTER COLUMN email DROP NOT NULL;

@@ -24,6 +24,7 @@ export interface Guest {
   last_name: string
   email: string | null
   phone: string | null
+  company: string | null
   guest_token: string
   qr_token: string
   status: GuestStatus

@@ -22,10 +22,24 @@ interface Event {
   event_number?: string | null
 }
 
+const PHONE_PREFIXES = [
+  { code: '+39', label: '+39 🇮🇹' }, { code: '+44', label: '+44 🇬🇧' },
+  { code: '+33', label: '+33 🇫🇷' }, { code: '+49', label: '+49 🇩🇪' },
+  { code: '+34', label: '+34 🇪🇸' }, { code: '+41', label: '+41 🇨🇭' },
+  { code: '+43', label: '+43 🇦🇹' }, { code: '+32', label: '+32 🇧🇪' },
+  { code: '+31', label: '+31 🇳🇱' }, { code: '+1',  label: '+1  🇺🇸' },
+  { code: '+971',label: '+971 🇦🇪' }, { code: '+81', label: '+81 🇯🇵' },
+  { code: '+86', label: '+86 🇨🇳' }, { code: '+91', label: '+91 🇮🇳' },
+  { code: '+55', label: '+55 🇧🇷' }, { code: '+61', label: '+61 🇦🇺' },
+  { code: '+7',  label: '+7  🇷🇺' }, { code: '+27', label: '+27 🇿🇦' },
+]
+
 interface Form {
   firstName: string
   lastName: string
+  company: string
   email: string
+  phonePrefix: string
   phone: string
   message: string
   consent: boolean
@@ -35,6 +49,7 @@ interface Errors {
   firstName?: string
   lastName?: string
   email?: string
+  phone?: string
   consent?: string
 }
 
@@ -45,7 +60,7 @@ export default function RegistrationPage() {
   const [event,      setEvent]      = useState<Event | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [step,       setStep]       = useState<'loading' | 'invalid' | 'closed' | 'form' | 'success'>('loading')
-  const [form,       setForm]       = useState<Form>({ firstName: '', lastName: '', email: '', phone: '', message: '', consent: false })
+  const [form,       setForm]       = useState<Form>({ firstName: '', lastName: '', company: '', email: '', phonePrefix: '+39', phone: '', message: '', consent: false })
   const [errors,     setErrors]     = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitErr,  setSubmitErr]  = useState<string | null>(null)
@@ -75,7 +90,14 @@ export default function RegistrationPage() {
     const e: Errors = {}
     if (!form.firstName.trim()) e.firstName = 'Required'
     if (!form.lastName.trim())  e.lastName  = 'Required'
-    if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Valid email required'
+    const hasEmail = form.email.trim() && /\S+@\S+\.\S+/.test(form.email)
+    const hasPhone = form.phone.trim().length > 0
+    if (!hasEmail && !hasPhone) {
+      e.email = 'Enter a valid email or a phone number'
+      e.phone = 'Enter a phone number or a valid email'
+    } else if (form.email.trim() && !hasEmail) {
+      e.email = 'Enter a valid email address'
+    }
     if (!form.consent) e.consent = 'Please accept to continue'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -85,32 +107,36 @@ export default function RegistrationPage() {
     if (!validate() || !event) return
     setSubmitting(true); setSubmitErr(null)
     try {
-      // Check for duplicate request
-      const { data: existing } = await supabase
-        .from('registration_requests')
-        .select('id, status')
-        .eq('event_id', event.id)
-        .eq('email', form.email.trim().toLowerCase())
-        .single()
+      // Check for duplicate request (only when email is provided)
+      if (form.email.trim()) {
+        const { data: existing } = await supabase
+          .from('registration_requests')
+          .select('id, status')
+          .eq('event_id', event.id)
+          .eq('email', form.email.trim().toLowerCase())
+          .maybeSingle()
 
-      if (existing) {
-        if (existing.status === 'approved') {
-          setSubmitErr('You are already registered for this event.')
-        } else if (existing.status === 'pending') {
-          setSubmitErr('Your request is already pending review. We will contact you soon.')
-        } else {
-          setSubmitErr('A request with this email already exists for this event.')
+        if (existing) {
+          if (existing.status === 'approved') {
+            setSubmitErr('You are already registered for this event.')
+          } else if (existing.status === 'pending') {
+            setSubmitErr('Your request is already pending review. We will contact you soon.')
+          } else {
+            setSubmitErr('A request with this email already exists for this event.')
+          }
+          setSubmitting(false)
+          return
         }
-        setSubmitting(false)
-        return
       }
 
+      const fullPhone = form.phone.trim() ? `${form.phonePrefix} ${form.phone.trim()}` : null
       const { error } = await supabase.from('registration_requests').insert({
         event_id:   event.id,
         first_name: form.firstName.trim(),
         last_name:  form.lastName.trim(),
-        email:      form.email.trim().toLowerCase(),
-        phone:      form.phone.trim() || null,
+        company:    form.company.trim() || null,
+        email:      form.email.trim().toLowerCase() || null,
+        phone:      fullPhone,
         message:    form.message.trim() || null,
         status:     'pending',
       })
@@ -240,16 +266,32 @@ export default function RegistrationPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.2em', color: T.n400, fontFamily: 'sans-serif', marginBottom: 5 }}>EMAIL ADDRESS *</label>
+            <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.2em', color: T.n400, fontFamily: 'sans-serif', marginBottom: 5 }}>COMPANY / ORGANISATION</label>
+            <input value={form.company} onChange={e => setForm(x => ({ ...x, company: e.target.value }))} style={inputStyle()} />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.2em', color: T.n400, fontFamily: 'sans-serif', marginBottom: 5 }}>EMAIL ADDRESS</label>
             <input type="email" value={form.email}
-              onChange={e => { setForm(x => ({ ...x, email: e.target.value })); setErrors(er => ({ ...er, email: undefined })) }}
+              onChange={e => { setForm(x => ({ ...x, email: e.target.value })); setErrors(er => ({ ...er, email: undefined, phone: undefined })) }}
               style={inputStyle(errors.email)} />
             {errors.email && <div style={{ fontSize: 10, color: T.red, marginTop: 3, fontFamily: 'sans-serif' }}>{errors.email}</div>}
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.2em', color: T.n400, fontFamily: 'sans-serif', marginBottom: 5 }}>PHONE (OPTIONAL)</label>
-            <input type="tel" value={form.phone} onChange={e => setForm(x => ({ ...x, phone: e.target.value }))} style={inputStyle()} />
+            <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.2em', color: T.n400, fontFamily: 'sans-serif', marginBottom: 5 }}>PHONE NUMBER</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <select value={form.phonePrefix} onChange={e => setForm(x => ({ ...x, phonePrefix: e.target.value }))}
+                style={{ padding: '11px 8px', border: `1px solid ${errors.phone ? T.red : T.n200}`, borderRadius: 2, fontSize: 13, fontFamily: 'sans-serif', color: T.n800, background: '#fff', outline: 'none', flexShrink: 0, width: 100 }}>
+                {PHONE_PREFIXES.map(p => <option key={p.code} value={p.code}>{p.label}</option>)}
+              </select>
+              <input type="tel" value={form.phone}
+                onChange={e => { setForm(x => ({ ...x, phone: e.target.value })); setErrors(er => ({ ...er, phone: undefined, email: undefined })) }}
+                placeholder="e.g. 333 123 4567"
+                style={{ ...inputStyle(errors.phone), flex: 1 }} />
+            </div>
+            {errors.phone && !errors.email && <div style={{ fontSize: 10, color: T.red, marginTop: 3, fontFamily: 'sans-serif' }}>{errors.phone}</div>}
+            <div style={{ fontSize: 9, color: T.n400, fontFamily: 'sans-serif', marginTop: 4 }}>Email or phone required — at least one.</div>
           </div>
 
           <div>
