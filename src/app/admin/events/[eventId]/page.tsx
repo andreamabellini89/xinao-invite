@@ -84,7 +84,8 @@ function RequestCard({ req, onApprove, onReject, loading }: {
           <div style={{ fontSize: 15, fontFamily: "'Georgia',serif", fontWeight: 600, color: T.n800 }}>
             {req.first_name} {req.last_name}
           </div>
-          <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif', marginTop: 2 }}>{req.email}</div>
+          {req.company && <div style={{ fontSize: 11, color: T.gold, fontFamily: 'sans-serif', marginTop: 1, fontWeight: 600 }}>{req.company}</div>}
+          <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif', marginTop: 2 }}>{req.email||'—'}</div>
           {req.phone && <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif' }}>{req.phone}</div>}
           {req.message && (
             <div style={{ fontSize: 11, color: T.n600, fontFamily: 'sans-serif', marginTop: 6, padding: '6px 10px', background: T.n100, borderRadius: 3, fontStyle: 'italic' }}>
@@ -426,7 +427,7 @@ export default function EventDetailPage() {
 
   const filtered = guests.filter(g=>{
     const q=search.toLowerCase()
-    return(!q||`${g.first_name} ${g.last_name} ${g.email??''}`.toLowerCase().includes(q))&&(statusFilter==='all'||g.status===statusFilter)
+    return(!q||`${g.first_name} ${g.last_name} ${g.email??''} ${g.company??''}`.toLowerCase().includes(q))&&(statusFilter==='all'||g.status===statusFilter)
   })
   const {sorted,key:sk,dir:sd,toggle} = useSort(filtered,'last_name')
   const allChecked = sorted.length>0 && sorted.every(g=>selected.has(g.id))
@@ -573,7 +574,7 @@ export default function EventDetailPage() {
         {tab==='guests'&&(
           <div>
             <div style={{display:'flex',gap:8,marginBottom:10,flexWrap:'wrap'}}>
-              <input placeholder="Search by name, email…" value={search} onChange={e=>setSearch(e.target.value)}
+              <input placeholder="Search by name, email, company…" value={search} onChange={e=>setSearch(e.target.value)}
                 style={{flex:1,minWidth:140,padding:'10px 12px',background:T.white,border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none'}}/>
               <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
                 {['all','invited','registered','checked-in'].map(s=>(
@@ -616,6 +617,7 @@ export default function EventDetailPage() {
                       <input type="checkbox" checked={selected.has(g.id)} onChange={()=>toggleOne(g.id)} style={{marginTop:3,flexShrink:0,width:16,height:16}}/>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:15,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:600}}>{g.first_name} {g.last_name}</div>
+                        {g.company&&<div style={{fontSize:11,color:T.gold,fontFamily:'sans-serif',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.company}</div>}
                         {g.email&&<div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.email}</div>}
                         <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}><Badge status={g.status}/>{g.registered_at&&<span style={{fontSize:10,color:T.n400,fontFamily:'sans-serif'}}>{fmtDate(g.registered_at)}</span>}</div>
                       </div>
@@ -659,7 +661,10 @@ export default function EventDetailPage() {
                   <div key={g.id}>
                     <div style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr 110px 100px 70px 36px',padding:'10px 14px',alignItems:'center',borderBottom:`1px solid ${T.n100}`,gap:8,background:selected.has(g.id)?'#F5F2ED':preview===g.id?'#F9F7F2':'transparent'}}>
                       <input type="checkbox" checked={selected.has(g.id)} onChange={()=>toggleOne(g.id)} style={{cursor:'pointer',width:13,height:13}}/>
-                      <div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.last_name}</div>
+                      <div style={{overflow:'hidden'}}>
+                        <div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.last_name}</div>
+                        {g.company&&<div style={{fontSize:10,color:T.gold,fontFamily:'sans-serif',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:1}}>{g.company}</div>}
+                      </div>
                       <div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.first_name}</div>
                       <div style={{display:'flex',alignItems:'center'}}><Badge status={g.status}/></div>
                       <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',whiteSpace:'nowrap'}}>{fmtDate(g.registered_at)}</div>
@@ -677,7 +682,7 @@ export default function EventDetailPage() {
                         <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
                           <InvitationCard guest={g} event={event} showDownload/>
                           <div style={{display:'flex',flexDirection:'column',gap:10,minWidth:200,flex:1}}>
-                            {[['EMAIL',g.email??'—'],['PHONE',g.phone??'—']].map(([l,v])=>(
+                            {[['EMAIL',g.email??'—'],['PHONE',g.phone??'—'],['COMPANY',g.company??'—']].map(([l,v])=>(
                               <div key={l}><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:2}}>{l}</div><div style={{fontSize:12,color:T.n800,fontFamily:'sans-serif'}}>{v}</div></div>
                             ))}
                             <div><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>SHORT CODE</div><div style={{fontSize:16,fontFamily:'monospace',fontWeight:700,color:T.gold,background:T.goldBg,padding:'5px 10px',borderRadius:3,letterSpacing:'0.15em',display:'inline-block'}}>{g.qr_token.slice(0,8).toUpperCase()}</div></div>
