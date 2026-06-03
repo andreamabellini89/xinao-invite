@@ -2,10 +2,33 @@ export type EventStatus = 'upcoming' | 'active' | 'past'
 export type GuestStatus = 'invited' | 'registered' | 'checked-in'
 
 export interface EmailCopy {
-  invited_to_en: string
-  invited_to_zh: string
-  confirm_en:    string
-  confirm_zh:    string
+  // Phrase 1 — above event name
+  invited_to_en:       string
+  invited_to_zh:       string
+  // Phrase 2 — above confirm button
+  confirm_en:          string
+  confirm_zh:          string
+  // "DEAR"
+  dear_en:             string
+  dear_zh:             string
+  // Confirm button
+  confirm_button_en:   string
+  confirm_button_zh:   string
+  // "Or copy this link:"
+  copy_link_en:        string
+  copy_link_zh:        string
+  // "THANK YOU"
+  thank_you_en:        string
+  thank_you_zh:        string
+  // Footer line 1
+  non_transferable_en: string
+  non_transferable_zh: string
+  // Footer line 2
+  present_qr_en:       string
+  present_qr_zh:       string
+  // Email subject
+  subject_en:          string
+  subject_zh:          string
 }
 
 export interface AgendaItem {

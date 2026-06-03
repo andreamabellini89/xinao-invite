@@ -133,12 +133,7 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
   )
 
-  const defaultCopy: EmailCopy = {
-    invited_to_en: DEFAULT_COPY.invitedTo.en,
-    invited_to_zh: DEFAULT_COPY.invitedTo.zh,
-    confirm_en:    DEFAULT_COPY.confirmPrompt.en,
-    confirm_zh:    DEFAULT_COPY.confirmPrompt.zh,
-  }
+  const defaultCopy: EmailCopy = { ...DEFAULT_COPY }
 
   const [copy, setCopy]     = useState<EmailCopy>(event.email_copy ?? defaultCopy)
   const [agenda, setAgenda] = useState<AgendaItem[]>(event.agenda ?? [])
@@ -194,46 +189,48 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
           EMAIL COPY
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
           <div style={{ background: '#FDF9F0', border: `1px solid ${T.goldBorder}`, borderRadius: 3, padding: '8px 12px', fontSize: 11, color: T.gold, fontFamily: 'sans-serif', lineHeight: 1.6 }}>
-            These texts appear in the invitation email (the sections highlighted in red in the original design).
+            All texts appear bilingual (EN + 中文) in the invitation email. Edit any field and click Save.
           </div>
 
-          {/* Phrase 1 */}
-          <div style={{ borderBottom: `1px solid ${T.n100}`, paddingBottom: 14 }}>
-            <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', marginBottom: 10, letterSpacing: '0.1em' }}>
-              PHRASE 1 — above the event name
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={labelStyle}>ENGLISH</label>
-                <input value={copy.invited_to_en} onChange={e => setCopy(c => ({ ...c, invited_to_en: e.target.value }))} style={iStyle} />
+          {/* Helper: renders a bilingual row */}
+          {([
+            { label: 'EMAIL SUBJECT', key_en: 'subject_en', key_zh: 'subject_zh', note: 'Appended with the event name', multi: false },
+            { label: '"DEAR"', key_en: 'dear_en', key_zh: 'dear_zh', note: 'Above the guest name', multi: false },
+            { label: 'PHRASE 1 — above the event name', key_en: 'invited_to_en', key_zh: 'invited_to_zh', note: '', multi: false },
+            { label: 'PHRASE 2 — above the confirm button', key_en: 'confirm_en', key_zh: 'confirm_zh', note: '', multi: true },
+            { label: 'CONFIRM BUTTON', key_en: 'confirm_button_en', key_zh: 'confirm_button_zh', note: 'The main CTA button', multi: false },
+            { label: '"OR COPY THIS LINK"', key_en: 'copy_link_en', key_zh: 'copy_link_zh', note: 'Below the button', multi: false },
+            { label: '"THANK YOU"', key_en: 'thank_you_en', key_zh: 'thank_you_zh', note: 'Footer heading', multi: false },
+            { label: 'NON-TRANSFERABLE NOTE', key_en: 'non_transferable_en', key_zh: 'non_transferable_zh', note: 'Footer line 1', multi: false },
+            { label: 'PRESENT QR CODE NOTE', key_en: 'present_qr_en', key_zh: 'present_qr_zh', note: 'Footer line 2 — location is appended automatically', multi: false },
+          ] as { label: string; key_en: keyof EmailCopy; key_zh: keyof EmailCopy; note: string; multi: boolean }[]).map(({ label, key_en, key_zh, note, multi }) => (
+            <div key={key_en} style={{ borderBottom: `1px solid ${T.n100}`, paddingBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', letterSpacing: '0.1em', fontWeight: 700 }}>{label}</div>
+                {note && <div style={{ fontSize: 10, color: T.n400, fontFamily: 'sans-serif' }}>— {note}</div>}
               </div>
-              <div>
-                <label style={labelStyle}>中文</label>
-                <input value={copy.invited_to_zh} onChange={e => setCopy(c => ({ ...c, invited_to_zh: e.target.value }))} style={iStyle} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>ENGLISH</label>
+                  {multi
+                    ? <textarea value={copy[key_en]} onChange={e => setCopy(c => ({ ...c, [key_en]: e.target.value }))} rows={2} style={{ ...iStyle, resize: 'vertical' }} />
+                    : <input value={copy[key_en]} onChange={e => setCopy(c => ({ ...c, [key_en]: e.target.value }))} style={iStyle} />
+                  }
+                </div>
+                <div>
+                  <label style={labelStyle}>中文</label>
+                  {multi
+                    ? <textarea value={copy[key_zh]} onChange={e => setCopy(c => ({ ...c, [key_zh]: e.target.value }))} rows={2} style={{ ...iStyle, resize: 'vertical' }} />
+                    : <input value={copy[key_zh]} onChange={e => setCopy(c => ({ ...c, [key_zh]: e.target.value }))} style={iStyle} />
+                  }
+                </div>
               </div>
             </div>
-          </div>
+          ))}
 
-          {/* Phrase 2 */}
-          <div>
-            <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', marginBottom: 10, letterSpacing: '0.1em' }}>
-              PHRASE 2 — above the confirm button
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div>
-                <label style={labelStyle}>ENGLISH</label>
-                <textarea value={copy.confirm_en} onChange={e => setCopy(c => ({ ...c, confirm_en: e.target.value }))} rows={2}
-                  style={{ ...iStyle, resize: 'vertical' }} />
-              </div>
-              <div>
-                <label style={labelStyle}>中文</label>
-                <textarea value={copy.confirm_zh} onChange={e => setCopy(c => ({ ...c, confirm_zh: e.target.value }))} rows={2}
-                  style={{ ...iStyle, resize: 'vertical' }} />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
