@@ -188,21 +188,21 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 660 }}>
 
-      {/* ── Testi email ── */}
+      {/* ── Email Copy ── */}
       <div style={{ background: T.white, border: `1px solid ${T.n200}`, borderRadius: 4, padding: '20px 20px 24px' }}>
         <div style={{ fontSize: 11, letterSpacing: '0.22em', color: T.gold, fontFamily: 'sans-serif', marginBottom: 18 }}>
-          TESTI EMAIL / EMAIL COPY
+          EMAIL COPY
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ background: '#FDF9F0', border: `1px solid ${T.goldBorder}`, borderRadius: 3, padding: '8px 12px', fontSize: 11, color: T.gold, fontFamily: 'sans-serif', lineHeight: 1.6 }}>
-            Questi testi appaiono nelle email di invito (le frasi evidenziate in rosso nel design originale).
+            These texts appear in the invitation email (the sections highlighted in red in the original design).
           </div>
 
-          {/* Frase 1 */}
+          {/* Phrase 1 */}
           <div style={{ borderBottom: `1px solid ${T.n100}`, paddingBottom: 14 }}>
             <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', marginBottom: 10, letterSpacing: '0.1em' }}>
-              FRASE 1 — sopra il nome dell'evento
+              PHRASE 1 — above the event name
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
@@ -216,10 +216,10 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
             </div>
           </div>
 
-          {/* Frase 2 */}
+          {/* Phrase 2 */}
           <div>
             <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', marginBottom: 10, letterSpacing: '0.1em' }}>
-              FRASE 2 — sopra il bottone di conferma
+              PHRASE 2 — above the confirm button
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
@@ -245,13 +245,13 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
           </div>
           <button onClick={addAgendaItem}
             style={{ padding: '6px 14px', background: T.n800, color: T.white, border: 'none', borderRadius: 2, cursor: 'pointer', fontSize: 10, letterSpacing: '0.12em', fontFamily: 'sans-serif', fontWeight: 700 }}>
-            + AGGIUNGI VOCE
+            + ADD ITEM
           </button>
         </div>
 
         {agenda.length === 0 && (
           <div style={{ padding: '20px', textAlign: 'center', color: T.n400, fontSize: 12, fontFamily: 'sans-serif', background: T.n100, borderRadius: 3 }}>
-            Nessuna voce — l'agenda non apparirà nell'email.<br/>Clicca "+ Aggiungi voce" per iniziare.
+            No items yet — the agenda section will not appear in the email.<br/>Click "+ Add Item" to get started.
           </div>
         )}
 
@@ -260,17 +260,17 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
             <div key={i} style={{ border: `1px solid ${T.n200}`, borderRadius: 3, padding: '12px 14px', background: T.n100 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr auto', gap: 8, alignItems: 'flex-end' }}>
                 <div>
-                  <label style={labelStyle}>ORARIO</label>
+                  <label style={labelStyle}>TIME</label>
                   <input value={item.time} onChange={e => updateAgendaItem(i, 'time', e.target.value)}
                     placeholder="20:00" style={iStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>TITOLO EN</label>
+                  <label style={labelStyle}>TITLE EN</label>
                   <input value={item.title_en} onChange={e => updateAgendaItem(i, 'title_en', e.target.value)}
                     placeholder="Dinner" style={iStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>标题 ZH</label>
+                  <label style={labelStyle}>TITLE 中文</label>
                   <input value={item.title_zh} onChange={e => updateAgendaItem(i, 'title_zh', e.target.value)}
                     placeholder="晚宴" style={iStyle} />
                 </div>
@@ -292,7 +292,7 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <button onClick={save} disabled={saving}
           style={{ padding: '12px 32px', background: T.gold, color: T.white, border: 'none', borderRadius: 2, cursor: saving ? 'wait' : 'pointer', fontSize: 11, letterSpacing: '0.18em', fontFamily: 'sans-serif', fontWeight: 700 }}>
-          {saving ? 'SAVING…' : 'SALVA MODIFICHE'}
+          {saving ? 'SAVING…' : 'SAVE CHANGES'}
         </button>
         {msg && (
           <div style={{ fontSize: 12, fontFamily: 'sans-serif', color: msg.type === 'ok' ? T.green : T.red }}>
