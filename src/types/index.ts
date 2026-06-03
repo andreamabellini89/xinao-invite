@@ -1,6 +1,19 @@
 export type EventStatus = 'upcoming' | 'active' | 'past'
 export type GuestStatus = 'invited' | 'registered' | 'checked-in'
 
+export interface EmailCopy {
+  invited_to_en: string
+  invited_to_zh: string
+  confirm_en:    string
+  confirm_zh:    string
+}
+
+export interface AgendaItem {
+  time:     string
+  title_en: string
+  title_zh: string
+}
+
 export interface XinaoEvent {
   id: string
   name: string
@@ -13,6 +26,8 @@ export interface XinaoEvent {
   status: EventStatus
   cover_image_url: string | null
   event_number: string | null
+  email_copy: EmailCopy | null
+  agenda: AgendaItem[] | null
   created_at: string
   updated_at: string
 }

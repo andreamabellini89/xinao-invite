@@ -7,7 +7,8 @@ import { InvitationCard } from '@/components/InvitationCard'
 import { QRScanner } from '@/components/QRScanner'
 import { THEME as T, fmtDate, fmtTime } from '@/lib/utils'
 import { createClient } from '@supabase/supabase-js'
-import type { XinaoEvent, Guest } from '@/types'
+import type { XinaoEvent, Guest, EmailCopy, AgendaItem } from '@/types'
+import { EMAIL_COPY as DEFAULT_COPY } from '@/lib/email-config'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
@@ -120,6 +121,184 @@ function RequestCard({ req, onApprove, onReject, loading }: {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Email Settings Panel ──────────────────────────────────────────────────────
+function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: () => void }) {
+  const supabaseLocal = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
+  )
+
+  const defaultCopy: EmailCopy = {
+    invited_to_en: DEFAULT_COPY.invitedTo.en,
+    invited_to_zh: DEFAULT_COPY.invitedTo.zh,
+    confirm_en:    DEFAULT_COPY.confirmPrompt.en,
+    confirm_zh:    DEFAULT_COPY.confirmPrompt.zh,
+  }
+
+  const [copy, setCopy]     = useState<EmailCopy>(event.email_copy ?? defaultCopy)
+  const [agenda, setAgenda] = useState<AgendaItem[]>(event.agenda ?? [])
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg]       = useState<{type:'ok'|'err'; text:string}|null>(null)
+
+  const iStyle = {
+    width: '100%', padding: '9px 11px',
+    border: `1px solid ${T.n200}`, borderRadius: 2,
+    fontSize: 13, fontFamily: 'sans-serif', color: T.n800, outline: 'none',
+    boxSizing: 'border-box' as const, background: T.white,
+  }
+  const labelStyle = {
+    display: 'block' as const, fontSize: 9, letterSpacing: '0.18em',
+    color: T.n400, fontFamily: 'sans-serif', marginBottom: 5,
+  }
+
+  const save = async () => {
+    setSaving(true); setMsg(null)
+    const { error } = await supabaseLocal
+      .from('events')
+      .update({ email_copy: copy, agenda, updated_at: new Date().toISOString() })
+      .eq('id', event.id)
+    setSaving(false)
+    if (error) { setMsg({ type: 'err', text: error.message }); return }
+    setMsg({ type: 'ok', text: 'Saved! Changes will appear in the next emails sent.' })
+    onSaved()
+  }
+
+  const addAgendaItem = () =>
+    setAgenda(a => [...a, { time: '', title_en: '', title_zh: '' }])
+
+  const updateAgendaItem = (i: number, field: keyof AgendaItem, value: string) =>
+    setAgenda(a => a.map((item, idx) => idx === i ? { ...item, [field]: value } : item))
+
+  const removeAgendaItem = (i: number) =>
+    setAgenda(a => a.filter((_, idx) => idx !== i))
+
+  const moveItem = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= agenda.length) return
+    setAgenda(a => {
+      const n = [...a]; [n[i], n[j]] = [n[j], n[i]]; return n
+    })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 660 }}>
+
+      {/* ── Testi email ── */}
+      <div style={{ background: T.white, border: `1px solid ${T.n200}`, borderRadius: 4, padding: '20px 20px 24px' }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.22em', color: T.gold, fontFamily: 'sans-serif', marginBottom: 18 }}>
+          TESTI EMAIL / EMAIL COPY
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ background: '#FDF9F0', border: `1px solid ${T.goldBorder}`, borderRadius: 3, padding: '8px 12px', fontSize: 11, color: T.gold, fontFamily: 'sans-serif', lineHeight: 1.6 }}>
+            Questi testi appaiono nelle email di invito (le frasi evidenziate in rosso nel design originale).
+          </div>
+
+          {/* Frase 1 */}
+          <div style={{ borderBottom: `1px solid ${T.n100}`, paddingBottom: 14 }}>
+            <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', marginBottom: 10, letterSpacing: '0.1em' }}>
+              FRASE 1 — sopra il nome dell'evento
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={labelStyle}>ENGLISH</label>
+                <input value={copy.invited_to_en} onChange={e => setCopy(c => ({ ...c, invited_to_en: e.target.value }))} style={iStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>中文</label>
+                <input value={copy.invited_to_zh} onChange={e => setCopy(c => ({ ...c, invited_to_zh: e.target.value }))} style={iStyle} />
+              </div>
+            </div>
+          </div>
+
+          {/* Frase 2 */}
+          <div>
+            <div style={{ fontSize: 10, color: T.n600, fontFamily: 'sans-serif', marginBottom: 10, letterSpacing: '0.1em' }}>
+              FRASE 2 — sopra il bottone di conferma
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <label style={labelStyle}>ENGLISH</label>
+                <textarea value={copy.confirm_en} onChange={e => setCopy(c => ({ ...c, confirm_en: e.target.value }))} rows={2}
+                  style={{ ...iStyle, resize: 'vertical' }} />
+              </div>
+              <div>
+                <label style={labelStyle}>中文</label>
+                <textarea value={copy.confirm_zh} onChange={e => setCopy(c => ({ ...c, confirm_zh: e.target.value }))} rows={2}
+                  style={{ ...iStyle, resize: 'vertical' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Agenda ── */}
+      <div style={{ background: T.white, border: `1px solid ${T.n200}`, borderRadius: 4, padding: '20px 20px 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.22em', color: T.gold, fontFamily: 'sans-serif' }}>
+            AGENDA / 议程
+          </div>
+          <button onClick={addAgendaItem}
+            style={{ padding: '6px 14px', background: T.n800, color: T.white, border: 'none', borderRadius: 2, cursor: 'pointer', fontSize: 10, letterSpacing: '0.12em', fontFamily: 'sans-serif', fontWeight: 700 }}>
+            + AGGIUNGI VOCE
+          </button>
+        </div>
+
+        {agenda.length === 0 && (
+          <div style={{ padding: '20px', textAlign: 'center', color: T.n400, fontSize: 12, fontFamily: 'sans-serif', background: T.n100, borderRadius: 3 }}>
+            Nessuna voce — l'agenda non apparirà nell'email.<br/>Clicca "+ Aggiungi voce" per iniziare.
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {agenda.map((item, i) => (
+            <div key={i} style={{ border: `1px solid ${T.n200}`, borderRadius: 3, padding: '12px 14px', background: T.n100 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr auto', gap: 8, alignItems: 'flex-end' }}>
+                <div>
+                  <label style={labelStyle}>ORARIO</label>
+                  <input value={item.time} onChange={e => updateAgendaItem(i, 'time', e.target.value)}
+                    placeholder="20:00" style={iStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>TITOLO EN</label>
+                  <input value={item.title_en} onChange={e => updateAgendaItem(i, 'title_en', e.target.value)}
+                    placeholder="Dinner" style={iStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>标题 ZH</label>
+                  <input value={item.title_zh} onChange={e => updateAgendaItem(i, 'title_zh', e.target.value)}
+                    placeholder="晚宴" style={iStyle} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <button onClick={() => moveItem(i, -1)} disabled={i === 0}
+                    style={{ width: 28, height: 24, background: 'none', border: `1px solid ${T.n200}`, borderRadius: 2, cursor: i === 0 ? 'default' : 'pointer', fontSize: 10, color: i === 0 ? T.n300 : T.n600 }}>▲</button>
+                  <button onClick={() => moveItem(i, 1)} disabled={i === agenda.length - 1}
+                    style={{ width: 28, height: 24, background: 'none', border: `1px solid ${T.n200}`, borderRadius: 2, cursor: i === agenda.length - 1 ? 'default' : 'pointer', fontSize: 10, color: i === agenda.length - 1 ? T.n300 : T.n600 }}>▼</button>
+                  <button onClick={() => removeAgendaItem(i)}
+                    style={{ width: 28, height: 24, background: 'none', border: `1px solid ${T.red}`, borderRadius: 2, cursor: 'pointer', fontSize: 11, color: T.red }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Salva ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button onClick={save} disabled={saving}
+          style={{ padding: '12px 32px', background: T.gold, color: T.white, border: 'none', borderRadius: 2, cursor: saving ? 'wait' : 'pointer', fontSize: 11, letterSpacing: '0.18em', fontFamily: 'sans-serif', fontWeight: 700 }}>
+          {saving ? 'SAVING…' : 'SALVA MODIFICHE'}
+        </button>
+        {msg && (
+          <div style={{ fontSize: 12, fontFamily: 'sans-serif', color: msg.type === 'ok' ? T.green : T.red }}>
+            {msg.type === 'ok' ? '✓ ' : '⚠ '}{msg.text}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -305,7 +484,7 @@ export default function EventDetailPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string|null>(null)
-  const [tab,      setTab]      = useState<'overview'|'guests'|'requests'|'scanner'>('overview')
+  const [tab,      setTab]      = useState<'overview'|'email'|'guests'|'requests'|'scanner'>('overview')
   const [statusFilter, setStatusFilter] = useState('all')
   const [reqFilter,    setReqFilter]    = useState('pending')
   const [search,   setSearch]   = useState('')
@@ -486,7 +665,7 @@ export default function EventDetailPage() {
 
         {/* Tabs */}
         <div style={{display:'flex',borderBottom:`1px solid ${T.n200}`,marginBottom:18,overflowX:'auto'}}>
-          {(['overview','guests','requests','scanner'] as const).map(t=>(
+          {(['overview','email','guests','requests','scanner'] as const).map(t=>(
             <button key={t} onClick={()=>{setTab(t);if(t!=='scanner') setCameraActive(false)}}
               style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1,whiteSpace:'nowrap',position:'relative'}}>
               <span style={{display:'inline-flex',alignItems:'center',gap:5}}>
@@ -568,6 +747,11 @@ export default function EventDetailPage() {
               {!guests.filter(g=>g.status!=='invited').length&&<div style={{padding:'20px',textAlign:'center',color:T.n400,fontSize:12,fontFamily:'sans-serif',background:T.white,border:`1px solid ${T.n200}`,borderRadius:4}}>No registrations yet.</div>}
             </div>
           </div>
+        )}
+
+        {/* ── EMAIL SETTINGS ── */}
+        {tab==='email'&&(
+          <EmailSettingsPanel event={event} onSaved={load}/>
         )}
 
         {/* ── GUESTS ── */}
