@@ -181,7 +181,7 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 660 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 660, margin: '0 auto', width: '100%' }}>
 
       {/* ── Email Copy ── */}
       <div style={{ background: T.white, border: `1px solid ${T.n200}`, borderRadius: 4, padding: '20px 20px 24px' }}>
