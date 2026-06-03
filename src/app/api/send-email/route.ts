@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
       present_qr_zh:       c.present_qr_zh       ?? DEFAULT_COPY.present_qr_zh,
       subject_en:          c.subject_en          ?? DEFAULT_COPY.subject_en,
       subject_zh:          c.subject_zh          ?? DEFAULT_COPY.subject_zh,
+      personal_invitation_en: c.personal_invitation_en ?? DEFAULT_COPY.personal_invitation_en,
+      personal_invitation_zh: c.personal_invitation_zh ?? DEFAULT_COPY.personal_invitation_zh,
     }
 
     const agenda: { time: string; title_en: string; title_zh: string }[] =
@@ -53,7 +55,8 @@ export async function POST(req: NextRequest) {
     <div style="padding:44px 44px 32px;text-align:center;border-bottom:1px solid #E0D8CC;">
       <div style="font-size:28px;font-weight:700;color:#B8922A;letter-spacing:0.1em;">XINAO</div>
       <div style="width:28px;height:1px;background:#B8922A;margin:12px auto;"></div>
-      <div style="font-size:10px;letter-spacing:0.38em;color:#5C5650;font-family:sans-serif;">PERSONAL INVITATION</div>
+      <div style="font-size:10px;letter-spacing:0.38em;color:#5C5650;font-family:sans-serif;">${t.personal_invitation_en}</div>
+      <div style="font-size:10px;letter-spacing:0.2em;color:#8A8078;font-family:sans-serif;margin-top:2px;">${t.personal_invitation_zh}</div>
     </div>
 
     <div style="padding:40px 44px;text-align:center;">

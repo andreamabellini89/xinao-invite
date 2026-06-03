@@ -42,6 +42,10 @@ export const EMAIL_COPY: EmailCopy = {
   // Email subject
   subject_en:          'Your invitation —',
   subject_zh:          '您的邀请函 —',
+
+  // Header tagline
+  personal_invitation_en: 'PERSONAL INVITATION',
+  personal_invitation_zh: '个人邀请函',
 }
 
 // ─────────────────────────────────────────────────────────────────

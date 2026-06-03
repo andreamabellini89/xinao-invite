@@ -29,6 +29,9 @@ export interface EmailCopy {
   // Email subject
   subject_en:          string
   subject_zh:          string
+  // Header tagline
+  personal_invitation_en: string
+  personal_invitation_zh: string
 }
 
 export interface AgendaItem {

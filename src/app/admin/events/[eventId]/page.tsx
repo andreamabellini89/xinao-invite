@@ -197,6 +197,7 @@ function EmailSettingsPanel({ event, onSaved }: { event: XinaoEvent; onSaved: ()
 
           {/* Helper: renders a bilingual row */}
           {([
+            { label: 'HEADER TAGLINE', key_en: 'personal_invitation_en', key_zh: 'personal_invitation_zh', note: 'Below the XINAO logo', multi: false },
             { label: 'EMAIL SUBJECT', key_en: 'subject_en', key_zh: 'subject_zh', note: 'Appended with the event name', multi: false },
             { label: '"DEAR"', key_en: 'dear_en', key_zh: 'dear_zh', note: 'Above the guest name', multi: false },
             { label: 'PHRASE 1 — above the event name', key_en: 'invited_to_en', key_zh: 'invited_to_zh', note: '', multi: false },
