@@ -590,6 +590,21 @@ export default function EventDetailPage() {
     setReviewLoading(null)
   }
 
+  const exportCSV = () => {
+    const headers = ['Last Name', 'First Name', 'Company', 'Email', 'Status', 'Registered At']
+    const rows = sorted.map(g => [
+      g.last_name, g.first_name, g.company ?? '', g.email ?? '', g.status, fmtDate(g.registered_at)
+    ])
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${event?.name ?? 'guests'}-export.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const toggleOne = (id:string) => setSelected(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n})
   const toggleAll = (list:Guest[]) => { if(list.every(g=>selected.has(g.id))) setSelected(new Set()); else setSelected(new Set(list.map(g=>g.id))) }
 
@@ -787,7 +802,13 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            <div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif',marginBottom:8}}>{sorted.length} guest{sorted.length!==1?'s':''}</div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+              <div style={{fontSize:10,color:T.n400,fontFamily:'sans-serif'}}>{sorted.length} guest{sorted.length!==1?'s':''}</div>
+              <button onClick={exportCSV}
+                style={{padding:'6px 13px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.12em',fontFamily:'sans-serif',color:T.n600,fontWeight:700}}>
+                ↓ EXPORT CSV
+              </button>
+            </div>
 
             {/* Mobile cards */}
             {isMobile ? (
@@ -829,10 +850,12 @@ export default function EventDetailPage() {
             ) : (
               /* Desktop table */
               <div style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,overflow:'hidden'}}>
-                <div style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr 110px 100px 70px 36px',padding:'9px 14px',borderBottom:`1px solid ${T.n100}`,background:T.n100,gap:8,alignItems:'center'}}>
+                <div style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr 1fr 1.5fr 110px 90px 90px 36px',padding:'9px 14px',borderBottom:`1px solid ${T.n100}`,background:T.n100,gap:8,alignItems:'center'}}>
                   <input type="checkbox" checked={allChecked} onChange={()=>toggleAll(sorted)} style={{cursor:'pointer',width:13,height:13}}/>
                   <SortCol k="last_name" label="LAST NAME"/>
                   <SortCol k="first_name" label="FIRST NAME"/>
+                  <SortCol k="company" label="COMPANY"/>
+                  <SortCol k="email" label="EMAIL ADDRESS"/>
                   <SortCol k="status" label="STATUS"/>
                   <SortCol k="registered_at" label="REG."/>
                   <div style={{fontSize:8,letterSpacing:'0.12em',color:T.n400,fontFamily:'sans-serif',fontWeight:700}}>ACTIONS</div>
@@ -841,13 +864,12 @@ export default function EventDetailPage() {
                 {sorted.length===0&&<div style={{padding:'24px',textAlign:'center',color:T.n400,fontSize:12,fontFamily:'sans-serif'}}>No guests match.</div>}
                 {sorted.map(g=>(
                   <div key={g.id}>
-                    <div style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr 110px 100px 70px 36px',padding:'10px 14px',alignItems:'center',borderBottom:`1px solid ${T.n100}`,gap:8,background:selected.has(g.id)?'#F5F2ED':preview===g.id?'#F9F7F2':'transparent'}}>
+                    <div style={{display:'grid',gridTemplateColumns:'32px 1fr 1fr 1fr 1.5fr 110px 90px 90px 36px',padding:'10px 14px',alignItems:'center',borderBottom:`1px solid ${T.n100}`,gap:8,background:selected.has(g.id)?'#F5F2ED':preview===g.id?'#F9F7F2':'transparent'}}>
                       <input type="checkbox" checked={selected.has(g.id)} onChange={()=>toggleOne(g.id)} style={{cursor:'pointer',width:13,height:13}}/>
-                      <div style={{overflow:'hidden'}}>
-                        <div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.last_name}</div>
-                        {g.company&&<div style={{fontSize:10,color:T.gold,fontFamily:'sans-serif',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:1}}>{g.company}</div>}
-                      </div>
+                      <div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.last_name}</div>
                       <div style={{fontSize:13,fontFamily:"'Georgia',serif",color:T.n600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.first_name}</div>
+                      <div style={{fontSize:11,color:T.gold,fontFamily:'sans-serif',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.company??'—'}</div>
+                      <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{g.email??'—'}</div>
                       <div style={{display:'flex',alignItems:'center'}}><Badge status={g.status}/></div>
                       <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',whiteSpace:'nowrap'}}>{fmtDate(g.registered_at)}</div>
                       <div style={{display:'flex',gap:3}}>
