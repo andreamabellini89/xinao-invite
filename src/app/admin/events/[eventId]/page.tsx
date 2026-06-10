@@ -402,6 +402,55 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
     setMsg('Guest added!'); setTimeout(()=>{ onDone(); onClose() }, 700)
   }
 
+  const importCSV = async () => {
+    const lines = csv.trim().split('\n').filter(Boolean)
+    if (!lines.length) return
+    setSaving(true)
+    const { v4: uuid } = await import('uuid')
+    const start = lines[0].toLowerCase().includes('first_name') ? 1 : 0
+    const rows = lines.slice(start).map(line => {
+      const [fn='',ln='',em='',ph=''] = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''))
+      return { event_id:eventId, first_name:fn, last_name:ln, email:em||null, phone:ph||null, guest_token:uuid(), qr_token:uuid(), status:'invited' as const }
+    }).filter(r=>r.first_name&&r.last_name)
+    const { error } = await supabase.from('guests').insert(rows)
+    setSaving(false)
+    if (error) { setMsg('Error: '+error.message); return }
+    setMsg(`${rows.length} guests imported!`); setTimeout(()=>{ onDone(); onClose() }, 900)
+  }
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const XLSX = await import('xlsx')
+      const data = await file.arrayBuffer()
+      const wb = XLSX.read(data)
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 })
+      if (!rows.length) return
+      const firstRow = (rows[0] as string[]).map((c: string) => String(c).toLowerCase())
+      const hasHeader = firstRow.some(c => ['first_name','firstname','nome','name','last_name','lastname','cognome'].includes(c))
+      const dataRows = hasHeader ? rows.slice(1) : rows
+      const colIdx = hasHeader ? {
+        fn: firstRow.findIndex(c=>['first_name','firstname','nome'].includes(c)),
+        ln: firstRow.findIndex(c=>['last_name','lastname','cognome','surname'].includes(c)),
+        em: firstRow.findIndex(c=>['email','e-mail','mail'].includes(c)),
+        ph: firstRow.findIndex(c=>['phone','telefono','tel','mobile','cellulare'].includes(c)),
+      } : { fn:0, ln:1, em:2, ph:3 }
+      const lines = dataRows
+        .filter((r: any[]) => r[colIdx.fn]||r[colIdx.ln])
+        .map((r: any[]) => [
+          r[colIdx.fn]??'', r[colIdx.ln]??'',
+          r[colIdx.em]??'', r[colIdx.ph]??''
+        ].map(v=>String(v).trim()).join(','))
+      setCsv(lines.join('\n'))
+      setMsg(`${lines.length} rows loaded from Excel — click Import CSV to confirm.`)
+    } catch (err: any) {
+      setMsg('Error reading Excel file: ' + err.message)
+    }
+    e.target.value = ''
+  }
+
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
       <div style={{background:T.white,borderRadius:4,padding:28,maxWidth:480,width:'100%',border:`1px solid ${T.n200}`,maxHeight:'90vh',overflowY:'auto'}}>
@@ -412,7 +461,7 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
         <div style={{display:'flex',gap:0,borderBottom:`1px solid ${T.n200}`,marginBottom:18}}>
           {(['single','csv'] as const).map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1}}>
-              {t==='single'?'SINGLE GUEST':'CSV IMPORT'}
+              {t==='single'?'SINGLE GUEST':'CSV / EXCEL IMPORT'}
             </button>
           ))}
         </div>
@@ -445,21 +494,18 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
         {tab==='csv'&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{fontSize:11,color:T.n600,fontFamily:'sans-serif',lineHeight:1.7,background:T.n100,padding:'10px 12px',borderRadius:3}}>
-              Format: <code>first_name,last_name,email,phone</code><br/>One per line.
+              <strong>CSV:</strong> <code>first_name,last_name,email,phone</code> — one per line.<br/>
+              <strong>Excel:</strong> columns <code>first_name · last_name · email · phone</code> (or same order without header).
             </div>
+            {/* Excel upload */}
+            <label style={{display:'flex',alignItems:'center',gap:8,padding:'9px 13px',border:`1px dashed ${T.n300}`,borderRadius:3,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',color:T.n600}}>
+              <span style={{fontSize:16}}>📂</span> Upload Excel file (.xlsx / .xls)
+              <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{display:'none'}}/>
+            </label>
             <textarea value={csv} onChange={e=>setCsv(e.target.value)} rows={5}
               style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'monospace',color:T.n800,outline:'none',boxSizing:'border-box',resize:'vertical'}}/>
-            <button onClick={async()=>{
-              const lines=csv.trim().split('\n').filter(Boolean); if(!lines.length) return
-              setSaving(true)
-              const {v4:uuid}=await import('uuid')
-              const start=lines[0].toLowerCase().includes('first_name')?1:0
-              const rows=lines.slice(start).map(line=>{const [fn='',ln='',em='',ph='']=line.split(',').map(s=>s.trim());return{event_id:eventId,first_name:fn,last_name:ln,email:em||null,phone:ph||null,guest_token:uuid(),qr_token:uuid(),status:'invited' as const}}).filter(r=>r.first_name&&r.last_name)
-              const {error}=await supabase.from('guests').insert(rows)
-              setSaving(false)
-              if(error){setMsg('Error: '+error.message);return}
-              setMsg(`${rows.length} guests imported!`);setTimeout(()=>{onDone();onClose()},900)
-            }} disabled={saving||!csv.trim()} style={{padding:'11px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',fontWeight:700}}>
+            <button onClick={importCSV} disabled={saving||!csv.trim()}
+              style={{padding:'11px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',fontWeight:700}}>
               {saving?'IMPORTING…':'IMPORT CSV'}
             </button>
           </div>

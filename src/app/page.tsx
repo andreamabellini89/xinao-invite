@@ -15,6 +15,13 @@ const ADMIN_PWD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? 'xinao2026'
 const SESSION_KEY = 'xinao_admin_auth'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-events.com'
 
+const getAdminPassword = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('xinao_admin_pwd') || ADMIN_PWD
+  }
+  return ADMIN_PWD
+}
+
 async function uploadImage(dataUrl: string, eventId: string): Promise<string|null> {
   const res  = await fetch(dataUrl)
   const blob = await res.blob()
@@ -64,6 +71,41 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
     setMsg(`${rows.length} guests imported!`); setTimeout(()=>{ onDone(); onClose() }, 900)
   }
 
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const XLSX = await import('xlsx')
+      const data = await file.arrayBuffer()
+      const wb = XLSX.read(data)
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 })
+      if (!rows.length) return
+      // Detect header row
+      const firstRow = (rows[0] as string[]).map((c: string) => String(c).toLowerCase())
+      const hasHeader = firstRow.some(c => ['first_name','firstname','nome','name','last_name','lastname','cognome'].includes(c))
+      const dataRows = hasHeader ? rows.slice(1) : rows
+      // Map columns: try header names or positional (col 0=first_name, 1=last_name, 2=email, 3=phone)
+      const colIdx = hasHeader ? {
+        fn: firstRow.findIndex(c=>['first_name','firstname','nome'].includes(c)),
+        ln: firstRow.findIndex(c=>['last_name','lastname','cognome','surname'].includes(c)),
+        em: firstRow.findIndex(c=>['email','e-mail','mail'].includes(c)),
+        ph: firstRow.findIndex(c=>['phone','telefono','tel','mobile','cellulare'].includes(c)),
+      } : { fn:0, ln:1, em:2, ph:3 }
+      const lines = dataRows
+        .filter((r: any[]) => r[colIdx.fn]||r[colIdx.ln])
+        .map((r: any[]) => [
+          r[colIdx.fn]??'', r[colIdx.ln]??'',
+          r[colIdx.em]??'', r[colIdx.ph]??''
+        ].map(v=>String(v).trim()).join(','))
+      setCsv(lines.join('\n'))
+      setMsg(`${lines.length} rows loaded from Excel — click Import CSV to confirm.`)
+    } catch (err: any) {
+      setMsg('Error reading Excel file: ' + err.message)
+    }
+    e.target.value = ''
+  }
+
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
       <div style={{background:T.white,borderRadius:4,padding:28,maxWidth:480,width:'100%',border:`1px solid ${T.n200}`,maxHeight:'90vh',overflowY:'auto'}}>
@@ -74,7 +116,7 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
         <div style={{display:'flex',gap:0,borderBottom:`1px solid ${T.n200}`,marginBottom:18}}>
           {(['single','csv'] as const).map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1}}>
-              {t==='single'?'SINGLE GUEST':'CSV IMPORT'}
+              {t==='single'?'SINGLE GUEST':'CSV / EXCEL IMPORT'}
             </button>
           ))}
         </div>
@@ -103,8 +145,14 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
         {tab==='csv'&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{fontSize:11,color:T.n600,fontFamily:'sans-serif',lineHeight:1.7,background:T.n100,padding:'10px 12px',borderRadius:3}}>
-              Format: <code>first_name,last_name,email,phone</code><br/>One per line. Header optional.
+              <strong>CSV:</strong> <code>first_name,last_name,email,phone</code> — one per line.<br/>
+              <strong>Excel:</strong> columns <code>first_name · last_name · email · phone</code> (or same order without header).
             </div>
+            {/* Excel upload */}
+            <label style={{display:'flex',alignItems:'center',gap:8,padding:'9px 13px',border:`1px dashed ${T.n300}`,borderRadius:3,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',color:T.n600}}>
+              <span style={{fontSize:16}}>📂</span> Upload Excel file (.xlsx / .xls)
+              <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{display:'none'}}/>
+            </label>
             <textarea value={csv} onChange={e=>setCsv(e.target.value)}
               placeholder={"Marco,Conti,m.conti@example.com,+39 02 123\nElena,Vasquez,e@example.com,"}
               rows={6} style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'monospace',color:T.n800,outline:'none',boxSizing:'border-box',resize:'vertical'}}/>
@@ -175,14 +223,15 @@ export default function AdminPage() {
   const [counts,     setCounts]     = useState<Record<string,{total:number,reg:number,in:number}>>({})
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState<string|null>(null)
-  const [formOpen,   setFormOpen]   = useState(false)
-  const [editEvt,    setEditEvt]    = useState<XinaoEvent|null>(null)
-  const [delEvt,     setDelEvt]     = useState<XinaoEvent|null>(null)
-  const [addGuestEvt,setAddGuestEvt]= useState<string|null>(null)
-  const [menuOpen,   setMenuOpen]   = useState<string|null>(null)
-  const [copiedId,   setCopiedId]   = useState<string|null>(null)
-  const [sortKey,    setSortKey]    = useState<'name'|'date'|'status'>('name')
-  const [sortDir,    setSortDir]    = useState<'asc'|'desc'>('asc')
+  const [formOpen,      setFormOpen]      = useState(false)
+  const [editEvt,       setEditEvt]       = useState<XinaoEvent|null>(null)
+  const [delEvt,        setDelEvt]        = useState<XinaoEvent|null>(null)
+  const [addGuestEvt,   setAddGuestEvt]   = useState<string|null>(null)
+  const [menuOpen,      setMenuOpen]      = useState<string|null>(null)
+  const [copiedId,      setCopiedId]      = useState<string|null>(null)
+  const [sortKey,       setSortKey]       = useState<'name'|'date'|'status'>('name')
+  const [sortDir,       setSortDir]       = useState<'asc'|'desc'>('asc')
+  const [showChangePwd, setShowChangePwd] = useState(false)
 
   useEffect(()=>{
     if(typeof window!=='undefined'&&sessionStorage.getItem(SESSION_KEY)==='1') setAuth(true)
@@ -212,7 +261,7 @@ export default function AdminPage() {
   useEffect(()=>{ if(auth) loadEvents() },[auth,loadEvents])
 
   const login=()=>{
-    if(pwd===ADMIN_PWD){ sessionStorage.setItem(SESSION_KEY,'1'); setAuth(true) }
+    if(pwd===getAdminPassword()){ sessionStorage.setItem(SESSION_KEY,'1'); setAuth(true) }
     else{ setPwdErr(true); setTimeout(()=>setPwdErr(false),2000) }
   }
   const logout=()=>{ sessionStorage.removeItem(SESSION_KEY); setAuth(false); setPwd('') }
@@ -302,7 +351,10 @@ export default function AdminPage() {
             <span style={{width:1,height:11,background:'#2A2520',display:'block'}}/>
             <span style={{fontSize:8,color:T.n600,letterSpacing:'0.22em',fontFamily:'sans-serif'}}>ADMIN DASHBOARD</span>
           </div>
-          <button onClick={logout} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>LOGOUT</button>
+          <div style={{display:'flex',gap:6}}>
+            <button onClick={()=>setShowChangePwd(true)} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>⚙ PASSWORD</button>
+            <button onClick={logout} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>LOGOUT</button>
+          </div>
         </div>
       </div>
 
@@ -396,6 +448,51 @@ export default function AdminPage() {
 
       {addGuestEvt&&<AddGuestModal eventId={addGuestEvt} onDone={loadEvents} onClose={()=>setAddGuestEvt(null)}/>}
       {menuOpen&&<div style={{position:'fixed',inset:0,zIndex:199}} onClick={()=>setMenuOpen(null)}/>}
+
+      {showChangePwd&&<ChangePwdModal onClose={()=>setShowChangePwd(false)}/>}
+    </div>
+  )
+}
+
+// ── Change Password Modal ─────────────────────────────────────────────────────
+function ChangePwdModal({ onClose }: { onClose:()=>void }) {
+  const [cur,    setCur]    = useState('')
+  const [next1,  setNext1]  = useState('')
+  const [next2,  setNext2]  = useState('')
+  const [msg,    setMsg]    = useState('')
+  const [ok,     setOk]     = useState(false)
+
+  const submit = () => {
+    if (cur !== getAdminPassword()) { setMsg('Current password is incorrect.'); return }
+    if (next1.length < 6)           { setMsg('New password must be at least 6 characters.'); return }
+    if (next1 !== next2)            { setMsg('New passwords do not match.'); return }
+    localStorage.setItem('xinao_admin_pwd', next1)
+    setOk(true); setMsg('Password changed successfully!')
+    setTimeout(onClose, 1500)
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{background:T.white,borderRadius:4,padding:28,maxWidth:380,width:'100%',border:`1px solid ${T.n200}`}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div style={{fontSize:16,fontFamily:"'Georgia',serif",color:T.n800,fontWeight:700}}>Change Password</div>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:T.n400}}>✕</button>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {[['Current password', cur, setCur],['New password', next1, setNext1],['Confirm new password', next2, setNext2]].map(([label, val, set])=>(
+            <div key={label as string}>
+              <label style={{display:'block',fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>{(label as string).toUpperCase()}</label>
+              <input type="password" value={val as string} onChange={e=>(set as any)(e.target.value)}
+                style={{width:'100%',padding:'9px 11px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',boxSizing:'border-box'}}/>
+            </div>
+          ))}
+          <button onClick={submit} disabled={ok}
+            style={{padding:'11px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,letterSpacing:'0.15em',fontFamily:'sans-serif',fontWeight:700,marginTop:4}}>
+            SAVE PASSWORD
+          </button>
+        </div>
+        {msg&&<div style={{marginTop:12,padding:'8px 12px',background:ok?T.greenBg:T.redBg,border:`1px solid ${ok?T.greenBorder:T.redBorder}`,borderRadius:3,fontSize:12,color:ok?T.green:T.red,fontFamily:'sans-serif'}}>{msg}</div>}
+      </div>
     </div>
   )
 }
