@@ -15,6 +15,13 @@ const ADMIN_PWD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? 'xinao2026'
 const SESSION_KEY = 'xinao_admin_auth'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-events.com'
 
+const getAdminPassword = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('xinao_admin_pwd') || ADMIN_PWD
+  }
+  return ADMIN_PWD
+}
+
 async function uploadImage(dataUrl: string, eventId: string): Promise<string|null> {
   const res  = await fetch(dataUrl)
   const blob = await res.blob()
@@ -179,14 +186,15 @@ export default function AdminPage() {
   const [counts,     setCounts]     = useState<Record<string,{total:number,reg:number,in:number}>>({})
   const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState<string|null>(null)
-  const [formOpen,   setFormOpen]   = useState(false)
-  const [editEvt,    setEditEvt]    = useState<XinaoEvent|null>(null)
-  const [delEvt,     setDelEvt]     = useState<XinaoEvent|null>(null)
-  const [addGuestEvt,setAddGuestEvt]= useState<string|null>(null)
-  const [menuOpen,   setMenuOpen]   = useState<string|null>(null)
-  const [copiedId,   setCopiedId]   = useState<string|null>(null)
-  const [sortKey,    setSortKey]    = useState<'name'|'date'|'status'>('name')
-  const [sortDir,    setSortDir]    = useState<'asc'|'desc'>('asc')
+  const [formOpen,      setFormOpen]      = useState(false)
+  const [editEvt,       setEditEvt]       = useState<XinaoEvent|null>(null)
+  const [delEvt,        setDelEvt]        = useState<XinaoEvent|null>(null)
+  const [addGuestEvt,   setAddGuestEvt]   = useState<string|null>(null)
+  const [menuOpen,      setMenuOpen]      = useState<string|null>(null)
+  const [copiedId,      setCopiedId]      = useState<string|null>(null)
+  const [sortKey,       setSortKey]       = useState<'name'|'date'|'status'>('name')
+  const [sortDir,       setSortDir]       = useState<'asc'|'desc'>('asc')
+  const [showChangePwd, setShowChangePwd] = useState(false)
 
   useEffect(()=>{
     if(typeof window!=='undefined'&&sessionStorage.getItem(SESSION_KEY)==='1') setAuth(true)
@@ -216,7 +224,7 @@ export default function AdminPage() {
   useEffect(()=>{ if(auth) loadEvents() },[auth,loadEvents])
 
   const login=()=>{
-    if(pwd===ADMIN_PWD){ sessionStorage.setItem(SESSION_KEY,'1'); setAuth(true) }
+    if(pwd===getAdminPassword()){ sessionStorage.setItem(SESSION_KEY,'1'); setAuth(true) }
     else{ setPwdErr(true); setTimeout(()=>setPwdErr(false),2000) }
   }
   const logout=()=>{ sessionStorage.removeItem(SESSION_KEY); setAuth(false); setPwd('') }
@@ -301,7 +309,10 @@ export default function AdminPage() {
             <span style={{width:1,height:11,background:'#2A2520',display:'block'}}/>
             <span style={{fontSize:8,color:T.n600,letterSpacing:'0.22em',fontFamily:'sans-serif'}}>ADMIN DASHBOARD</span>
           </div>
-          <button onClick={logout} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>LOGOUT</button>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>setShowChangePwd(true)} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>⚙ PASSWORD</button>
+            <button onClick={logout} style={{padding:'4px 11px',background:'none',border:'1px solid #2A2520',borderRadius:2,cursor:'pointer',fontSize:9,letterSpacing:'0.14em',fontFamily:'sans-serif',color:T.n600}}>LOGOUT</button>
+          </div>
         </div>
       </div>
 
@@ -395,6 +406,39 @@ export default function AdminPage() {
 
       {addGuestEvt&&<AddGuestModal eventId={addGuestEvt} onDone={loadEvents} onClose={()=>setAddGuestEvt(null)}/>}
       {menuOpen&&<div style={{position:'fixed',inset:0,zIndex:99}} onClick={()=>setMenuOpen(null)}/>}
+      {showChangePwd&&<ChangePwdModal onClose={()=>setShowChangePwd(false)}/>}
+    </div>
+  )
+}
+
+function ChangePwdModal({ onClose }: { onClose:()=>void }) {
+  const [cur, setCur] = useState('')
+  const [next1, setNext1] = useState('')
+  const [next2, setNext2] = useState('')
+  const [msg, setMsg] = useState('')
+  const [ok, setOk] = useState(false)
+  const submit = () => {
+    if (cur !== getAdminPassword()) { setMsg('Current password is incorrect.'); return }
+    if (next1.length < 6) { setMsg('New password must be at least 6 characters.'); return }
+    if (next1 !== next2) { setMsg('New passwords do not match.'); return }
+    localStorage.setItem('xinao_admin_pwd', next1)
+    setOk(true); setMsg('Password changed successfully!')
+    setTimeout(onClose, 1500)
+  }
+  const inp: React.CSSProperties = {width:'100%',padding:'9px 12px',border:`1px solid ${T.n200}`,borderRadius:3,fontSize:13,fontFamily:'sans-serif',background:T.cream,color:T.n800,boxSizing:'border-box',marginBottom:10}
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{background:T.cream,borderRadius:4,padding:'28px 28px 22px',width:340,maxWidth:'94vw',boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+        <div style={{fontSize:13,letterSpacing:'0.18em',fontFamily:'sans-serif',fontWeight:700,color:T.n800,marginBottom:18}}>CHANGE PASSWORD</div>
+        <input type="password" placeholder="Current password" value={cur} onChange={e=>setCur(e.target.value)} style={inp}/>
+        <input type="password" placeholder="New password (min 6 chars)" value={next1} onChange={e=>setNext1(e.target.value)} style={inp}/>
+        <input type="password" placeholder="Confirm new password" value={next2} onChange={e=>setNext2(e.target.value)} style={inp}/>
+        {msg&&<div style={{fontSize:12,fontFamily:'sans-serif',color:ok?'#2d7a2d':T.red,marginBottom:10}}>{msg}</div>}
+        <div style={{display:'flex',gap:8,marginTop:4}}>
+          <button onClick={submit} style={{flex:1,padding:'9px 0',background:T.gold,border:'none',borderRadius:3,cursor:'pointer',fontSize:11,letterSpacing:'0.14em',fontFamily:'sans-serif',color:'#1a1612',fontWeight:700}}>SAVE PASSWORD</button>
+          <button onClick={onClose} style={{padding:'9px 14px',background:'none',border:`1px solid ${T.n200}`,borderRadius:3,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',color:T.n600}}>CANCEL</button>
+        </div>
+      </div>
     </div>
   )
 }
