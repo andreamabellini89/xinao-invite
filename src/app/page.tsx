@@ -199,6 +199,26 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
               <option value="upcoming">Upcoming</option><option value="active">Active</option><option value="past">Past</option>
             </select>
           </div>
+          <div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <label style={{display:'block',fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif'}}>EVENT SCHEDULE</label>
+              <button type="button" onClick={()=>setForm(f=>({...f,schedule:[...f.schedule,{time:'',activity:''}]}))}
+                style={{background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:10,fontFamily:'sans-serif',color:T.n600,padding:'3px 10px',letterSpacing:'0.1em'}}>
+                + ADD SLOT
+              </button>
+            </div>
+            {form.schedule.length===0&&<div style={{fontSize:11,color:T.n300,fontFamily:'sans-serif',fontStyle:'italic'}}>No schedule yet — click + ADD SLOT to start</div>}
+            {form.schedule.map((item,i)=>(
+              <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
+                <input value={item.time} placeholder="20:00" onChange={e=>setForm(f=>({...f,schedule:f.schedule.map((s,j)=>j===i?{...s,time:e.target.value}:s)}))}
+                  style={{width:80,padding:'8px 10px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'sans-serif',color:T.n800,background:T.white,flexShrink:0}}/>
+                <input value={item.activity} placeholder="e.g. Welcome cocktail & buffet dinner" onChange={e=>setForm(f=>({...f,schedule:f.schedule.map((s,j)=>j===i?{...s,activity:e.target.value}:s)}))}
+                  style={{flex:1,padding:'8px 10px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'sans-serif',color:T.n800,background:T.white}}/>
+                <button type="button" onClick={()=>setForm(f=>({...f,schedule:f.schedule.filter((_,j)=>j!==i)}))}
+                  style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:T.n400,padding:'0 4px',lineHeight:1}}>✕</button>
+              </div>
+            ))}
+          </div>
           <ImageUpload value={form.cover_image_url} onChange={v=>set('cover_image_url',v)} label="Invitation Template (JPG/PNG)"/>
         </div>
         <div style={{display:'flex',gap:10,marginTop:22,justifyContent:'flex-end',flexWrap:'wrap'}}>
