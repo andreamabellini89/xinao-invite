@@ -5,7 +5,7 @@ import { Modal } from '@/components/Modal'
 import { ImageUpload } from '@/components/ImageUpload'
 import { THEME as T } from '@/lib/utils'
 import { createClient } from '@supabase/supabase-js'
-import type { XinaoEvent, EventFormData } from '@/types'
+import type { XinaoEvent, EventFormData, ScheduleItem } from '@/types'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
@@ -170,8 +170,8 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
 
 // ── Event Form Modal ──────────────────────────────────────────────────────────
 function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null; onSave:(f:EventFormData)=>Promise<void>; onClose:()=>void }) {
-  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null,event_number:''}
-  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??''}:blank)
+  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null,event_number:'',schedule:[]}
+  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??'',schedule:(initial as XinaoEvent & {schedule?: ScheduleItem[]}).schedule??[]}:blank)
   const [saving, setSaving] = useState(false)
   const set = (k:keyof EventFormData, v:string|null) => setForm(f=>({...f,[k]:v}))
   const valid = form.name && form.date && form.location
