@@ -9,6 +9,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
 )
 
+interface ScheduleItem {
+  time: string
+  activity: string
+}
+
 interface Event {
   id: string
   name: string
@@ -20,6 +25,7 @@ interface Event {
   description?: string | null
   cover_image_url?: string | null
   event_number?: string | null
+  schedule?: ScheduleItem[] | null
 }
 
 interface Form {
@@ -220,7 +226,18 @@ export default function RegistrationPage() {
           <div style={{ fontSize: 13, color: T.gold, fontFamily: 'sans-serif', marginBottom: 3 }}>{event.date} · {event.time}</div>
           <div style={{ fontSize: 12, color: T.n600, fontFamily: 'sans-serif', marginBottom: event.address ? 2 : 0 }}>{event.location}</div>
           {event.address && <div style={{ fontSize: 11, color: T.n400, fontFamily: 'sans-serif' }}>{event.address}</div>}
-          {event.description && <div style={{ fontSize: 11, color: T.gold, fontStyle: 'italic', marginTop: 8, fontFamily: "'Georgia',serif" }}>{event.description}</div>}
+          {event.schedule && event.schedule.length > 0 ? (
+            <div style={{ marginTop: 12, textAlign: 'left' }}>
+              {event.schedule.map((item, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 4, fontSize: 11, fontFamily: 'sans-serif', color: T.n600 }}>
+                  <span style={{ color: T.gold, minWidth: 50, fontWeight: 600, flexShrink: 0 }}>{item.time}</span>
+                  <span>{item.activity}</span>
+                </div>
+              ))}
+            </div>
+          ) : event.description ? (
+            <div style={{ fontSize: 11, color: T.gold, fontStyle: 'italic', marginTop: 8, fontFamily: "'Georgia',serif" }}>{event.description}</div>
+          ) : null}
         </div>
 
         {/* Info banner */}

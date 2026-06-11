@@ -82,6 +82,11 @@ export interface EventStats {
   invited: number
 }
 
+export interface ScheduleItem {
+  time: string
+  activity: string
+}
+
 export interface EventFormData {
   name: string
   subtitle: string
@@ -93,4 +98,5 @@ export interface EventFormData {
   status: EventStatus
   cover_image_url: string | null
   event_number: string
+  schedule: ScheduleItem[]
 }

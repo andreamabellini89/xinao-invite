@@ -5,7 +5,7 @@ import { Modal } from '@/components/Modal'
 import { ImageUpload } from '@/components/ImageUpload'
 import { THEME as T } from '@/lib/utils'
 import { createClient } from '@supabase/supabase-js'
-import type { XinaoEvent, EventFormData } from '@/types'
+import type { XinaoEvent, EventFormData, ScheduleItem } from '@/types'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
@@ -133,8 +133,8 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
 
 // ── Event Form Modal ──────────────────────────────────────────────────────────
 function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null; onSave:(f:EventFormData)=>Promise<void>; onClose:()=>void }) {
-  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null,event_number:''}
-  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??''}:blank)
+  const blank: EventFormData = {name:'',subtitle:'',date:'',time:'',location:'',address:'',description:'',status:'upcoming',cover_image_url:null,event_number:'',schedule:[]}
+  const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??'',schedule:(initial as XinaoEvent & {schedule?: ScheduleItem[]}).schedule??[]}:blank)
   const [saving, setSaving] = useState(false)
   const set = (k:keyof EventFormData, v:string|null) => setForm(f=>({...f,[k]:v}))
   const valid = form.name && form.date && form.location
@@ -163,6 +163,27 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
             </select>
           </div>
           <ImageUpload value={form.cover_image_url} onChange={v=>set('cover_image_url',v)} label="Invitation Template (JPG/PNG)"/>
+          {/* Schedule */}
+          <div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <label style={{display:'block',fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif'}}>EVENT SCHEDULE</label>
+              <button type="button" onClick={()=>setForm(f=>({...f,schedule:[...f.schedule,{time:'',activity:''}]}))}
+                style={{background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:10,fontFamily:'sans-serif',color:T.n600,padding:'3px 10px',letterSpacing:'0.1em'}}>
+                + ADD SLOT
+              </button>
+            </div>
+            {form.schedule.length===0&&<div style={{fontSize:11,color:T.n300,fontFamily:'sans-serif',fontStyle:'italic'}}>No schedule yet — click + ADD SLOT to start</div>}
+            {form.schedule.map((item,i)=>(
+              <div key={i} style={{display:'flex',gap:8,marginBottom:8,alignItems:'center'}}>
+                <input value={item.time} placeholder="20:00" onChange={e=>setForm(f=>({...f,schedule:f.schedule.map((s,j)=>j===i?{...s,time:e.target.value}:s)}))}
+                  style={{width:80,padding:'8px 10px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'sans-serif',color:T.n800,background:T.white,flexShrink:0}}/>
+                <input value={item.activity} placeholder="e.g. Welcome cocktail & buffet dinner" onChange={e=>setForm(f=>({...f,schedule:f.schedule.map((s,j)=>j===i?{...s,activity:e.target.value}:s)}))}
+                  style={{flex:1,padding:'8px 10px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:12,fontFamily:'sans-serif',color:T.n800,background:T.white}}/>
+                <button type="button" onClick={()=>setForm(f=>({...f,schedule:f.schedule.filter((_,j)=>j!==i)}))}
+                  style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:T.n400,padding:'0 4px',lineHeight:1}}>✕</button>
+              </div>
+            ))}
+          </div>
         </div>
         <div style={{display:'flex',gap:10,marginTop:22,justifyContent:'flex-end',flexWrap:'wrap'}}>
           <button onClick={onClose} style={{padding:'10px 18px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',color:T.n600}}>CANCEL</button>
@@ -241,7 +262,7 @@ export default function AdminPage() {
         const {error}=await supabase.from('events').update({...form,cover_image_url:img,updated_at:new Date().toISOString()}).eq('id',editEvt.id)
         if(error) throw error
       } else {
-        const {data,error}=await supabase.from('events').insert({name:form.name,subtitle:form.subtitle||null,date:form.date,time:form.time,location:form.location,address:form.address||null,description:form.description||null,status:form.status,cover_image_url:null,event_number:form.event_number||null}).select().single()
+        const {data,error}=await supabase.from('events').insert({name:form.name,subtitle:form.subtitle||null,date:form.date,time:form.time,location:form.location,address:form.address||null,description:form.description||null,status:form.status,cover_image_url:null,event_number:form.event_number||null,schedule:form.schedule.length?form.schedule:null}).select().single()
         if(error) throw error
         if(img?.startsWith('data:')){img=await uploadImage(img,data.id);if(img) await supabase.from('events').update({cover_image_url:img}).eq('id',data.id)}
       }
@@ -274,7 +295,7 @@ export default function AdminPage() {
   }
 
   const dupEvent=async(evt:XinaoEvent)=>{
-    const {error}=await supabase.from('events').insert({name:`${evt.name} (Copy)`,subtitle:evt.subtitle,date:evt.date,time:evt.time,location:evt.location,address:evt.address,description:evt.description,status:'upcoming',cover_image_url:evt.cover_image_url})
+    const {error}=await supabase.from('events').insert({name:`${evt.name} (Copy)`,subtitle:evt.subtitle,date:evt.date,time:evt.time,location:evt.location,address:evt.address,description:evt.description,status:'upcoming',cover_image_url:evt.cover_image_url,schedule:(evt as XinaoEvent & {schedule?:unknown}).schedule??null})
     if(error){ setError(error.message); return }
     await loadEvents()
   }
