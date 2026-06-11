@@ -162,7 +162,6 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
               <option value="upcoming">Upcoming</option><option value="active">Active</option><option value="past">Past</option>
             </select>
           </div>
-          <ImageUpload value={form.cover_image_url} onChange={v=>set('cover_image_url',v)} label="Invitation Template (JPG/PNG)"/>
           {/* Schedule */}
           <div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
@@ -184,6 +183,7 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
               </div>
             ))}
           </div>
+          <ImageUpload value={form.cover_image_url} onChange={v=>set('cover_image_url',v)} label="Invitation Template (JPG/PNG)"/>
         </div>
         <div style={{display:'flex',gap:10,marginTop:22,justifyContent:'flex-end',flexWrap:'wrap'}}>
           <button onClick={onClose} style={{padding:'10px 18px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',color:T.n600}}>CANCEL</button>
