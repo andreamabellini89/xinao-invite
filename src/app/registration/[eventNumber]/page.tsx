@@ -175,7 +175,7 @@ export default function RegistrationPage() {
       <div style={{ width: '100%', maxWidth: 460 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 26, fontWeight: 700, color: T.gold, fontFamily: "'Georgia',serif", letterSpacing: '0.1em' }}>XINAO</div>
+          <img src="/xinao-logo.svg" alt="XINAO" height={32} style={{ display: 'block', margin: '0 auto' }} />
           <div style={{ width: 18, height: 1, background: T.gold, margin: '8px auto' }} />
         </div>
 
@@ -211,7 +211,7 @@ export default function RegistrationPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 24, fontWeight: 700, color: T.gold, fontFamily: "'Georgia',serif", letterSpacing: '0.08em' }}>XINAO</div>
+          <img src="/xinao-logo.svg" alt="XINAO" height={30} style={{ display: 'block', margin: '0 auto' }} />
           <div style={{ width: 16, height: 1, background: T.gold, margin: '8px auto' }} />
           <div style={{ fontSize: 8, letterSpacing: '0.3em', color: T.n600, fontFamily: 'sans-serif' }}>REQUEST TO ATTEND</div>
         </div>

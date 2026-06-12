@@ -21,7 +21,7 @@ export function TopBar({ section, backHref, onBack }: Props) {
     <div style={{ background: T.black, borderBottom: '1px solid #161616', padding: '0 16px', position: 'sticky', top: 0, zIndex: 200 }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 46 }}>
         <button onClick={handleLogoClick} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, padding: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.gold, letterSpacing: '0.12em', fontFamily: "'Georgia',serif" }}>XINAO</span>
+          <img src="/xinao-logo.svg" alt="XINAO" height={18} style={{ display: 'block' }} />
           <span style={{ width: 1, height: 11, background: '#2A2520', display: 'block' }} />
           <span style={{ fontSize: 8, color: T.n600, letterSpacing: '0.22em', fontFamily: 'sans-serif' }}>{section}</span>
         </button>

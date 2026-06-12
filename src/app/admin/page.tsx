@@ -304,7 +304,7 @@ export default function AdminPage() {
   if(!auth) return(
     <div style={{minHeight:'100vh',background:T.black,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
       <div style={{width:'100%',maxWidth:340,textAlign:'center'}}>
-        <div style={{fontSize:26,fontWeight:700,color:T.gold,fontFamily:"'Georgia',serif",letterSpacing:'0.1em',marginBottom:4}}>XINAO</div>
+        <img src="/xinao-logo.svg" alt="XINAO" height={32} style={{display:'block',margin:'0 auto 8px'}} />
         <div style={{width:18,height:1,background:T.gold,margin:'0 auto 7px'}}/>
         <div style={{fontSize:9,letterSpacing:'0.3em',color:T.n600,fontFamily:'sans-serif',marginBottom:32}}>ADMIN DASHBOARD</div>
         <div style={{background:'#111',border:`1px solid ${pwdErr?'#9F0E10':'#1A1A1A'}`,borderRadius:4,padding:28}}>
@@ -326,7 +326,7 @@ export default function AdminPage() {
       <div style={{background:T.black,borderBottom:'1px solid #1A1A1A',padding:'0 16px',position:'sticky',top:0,zIndex:200}}>
         <div style={{maxWidth:1100,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:46}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontSize:14,fontWeight:700,color:T.gold,letterSpacing:'0.12em',fontFamily:"'Georgia',serif"}}>XINAO</span>
+            <img src="/xinao-logo.svg" alt="XINAO" height={18} style={{display:'block'}} />
             <span style={{width:1,height:11,background:'#2A2520',display:'block'}}/>
             <span style={{fontSize:8,color:T.n600,letterSpacing:'0.22em',fontFamily:'sans-serif'}}>ADMIN DASHBOARD</span>
           </div>

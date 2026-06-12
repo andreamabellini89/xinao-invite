@@ -9,22 +9,20 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-invite.vercel.ap
 
 // ── Real QR Code using qrcode library ─────────────────────────────────────────
 function RealQRCode({ value, size=140 }: { value:string; size?:number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [ready, setReady] = useState(false)
+  const [dataUrl, setDataUrl] = useState<string>('')
 
   useEffect(() => {
     let cancelled = false
     const render = async () => {
       try {
         const QRCode = (await import('qrcode')).default
-        if (!canvasRef.current || cancelled) return
-        await QRCode.toCanvas(canvasRef.current, value, {
+        const url = await QRCode.toDataURL(value, {
           width: size,
           margin: 2,
           color: { dark: '#1A1008', light: '#FFFFFF' },
           errorCorrectionLevel: 'H',
         })
-        if (!cancelled) setReady(true)
+        if (!cancelled) setDataUrl(url)
       } catch (e) {
         console.error('QR generation failed:', e)
       }
@@ -35,12 +33,12 @@ function RealQRCode({ value, size=140 }: { value:string; size?:number }) {
 
   return (
     <div style={{ background:'#fff', padding:10, borderRadius:4, display:'inline-block' }}>
-      <canvas ref={canvasRef} style={{ display:'block', opacity: ready ? 1 : 0, transition:'opacity 0.3s' }}/>
-      {!ready && (
-        <div style={{ width:size, height:size, display:'flex', alignItems:'center', justifyContent:'center', background:'#fff' }}>
-          <div style={{ fontSize:9, color:'#A09890', fontFamily:'sans-serif' }}>Loading QR…</div>
-        </div>
-      )}
+      {dataUrl
+        ? <img src={dataUrl} alt="QR Code" width={size} height={size} style={{ display:'block' }} />
+        : <div style={{ width:size, height:size, display:'flex', alignItems:'center', justifyContent:'center', background:'#fff' }}>
+            <div style={{ fontSize:9, color:'#A09890', fontFamily:'sans-serif' }}>Loading QR…</div>
+          </div>
+      }
     </div>
   )
 }
@@ -151,14 +149,8 @@ export function InvitationCard({ guest, event, showDownload=false }: { guest:Gue
 
           {/* Logo */}
           <div style={{ textAlign:'center', marginBottom:6 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}>
-              <span style={{ fontSize:32, fontWeight:900, color:T.gold, fontStyle:'italic' }}>X</span>
-              <span style={{ fontSize:32, fontWeight:900, color:T.gold, letterSpacing:'0.04em' }}>INAO</span>
-              {event.subtitle && (
-                <span style={{ fontSize:12, fontWeight:700, color:T.gold, border:`2px solid ${T.gold}`, borderRadius:5, padding:'2px 6px', fontFamily:'sans-serif', marginLeft:4 }}>35</span>
-              )}
-            </div>
-            {event.subtitle && <div style={{ fontSize:12, color:T.gold, fontStyle:'italic', letterSpacing:'0.1em', marginTop:4 }}>{event.subtitle}</div>}
+            <img src="/xinao-logo.svg" alt="XINAO" height={40} style={{ display:'block', margin:'0 auto' }} />
+            {event.subtitle && <div style={{ fontSize:12, color:T.gold, fontStyle:'italic', letterSpacing:'0.1em', marginTop:8 }}>{event.subtitle}</div>}
           </div>
 
           <div style={{ width:24, height:1, background:T.gold, margin:'20px auto' }}/>
