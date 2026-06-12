@@ -589,7 +589,9 @@ export default function EventDetailPage() {
   }
 
   const deleteGuests = async (ids: string[]) => {
-    const { error } = await supabase.from('guests').delete().in('id',ids)
+    const { error: reqErr } = await supabase.from('registration_requests').delete().in('guest_id', ids)
+    if (reqErr) { setError(reqErr.message); setDeleteConfirm(null); return }
+    const { error } = await supabase.from('guests').delete().in('id', ids)
     if (error) { setError(error.message); setDeleteConfirm(null); return }
     setGuests(p => p.filter(g => !ids.includes(g.id)))
     setSelected(new Set()); setDeleteConfirm(null)
