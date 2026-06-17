@@ -527,7 +527,9 @@ export default function EventDetailPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string|null>(null)
-  const [tab,      setTab]      = useState<'overview'|'email'|'guests'|'requests'|'scanner'>('overview')
+  const [tab,      setTab]      = useState<'overview'|'email'|'guests'|'requests'|'scanner'|'settings'>('overview')
+  const [pdfPrefix, setPdfPrefix] = useState('')
+  const [savingPrefix, setSavingPrefix] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [reqFilter,    setReqFilter]    = useState('pending')
   const [search,   setSearch]   = useState('')
@@ -552,6 +554,7 @@ export default function EventDetailPage() {
       ])
       if (evtErr) throw evtErr
       setEvent(evt); setGuests(gsts ?? [])
+      setPdfPrefix(evt?.pdf_prefix ?? '')
     } catch (e:any) { setError(e.message) }
     // registration_requests may not exist yet — load separately, fail silently
     try {
@@ -726,7 +729,7 @@ export default function EventDetailPage() {
 
         {/* Tabs */}
         <div style={{display:'flex',borderBottom:`1px solid ${T.n200}`,marginBottom:18,overflowX:'auto'}}>
-          {(['overview','email','guests','requests','scanner'] as const).map(t=>(
+          {(['overview','email','guests','requests','scanner','settings'] as const).map(t=>(
             <button key={t} onClick={()=>{setTab(t);if(t!=='scanner') setCameraActive(false)}}
               style={{padding:'8px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t?T.n800:'transparent'}`,cursor:'pointer',fontSize:9,letterSpacing:'0.15em',fontFamily:'sans-serif',color:tab===t?T.n800:T.n400,fontWeight:tab===t?700:400,marginBottom:-1,whiteSpace:'nowrap',position:'relative'}}>
               <span style={{display:'inline-flex',alignItems:'center',gap:5}}>
@@ -1050,6 +1053,32 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── SETTINGS ── */}
+        {tab==='settings'&&(
+          <div style={{maxWidth:480}}>
+            <div style={{fontSize:9,letterSpacing:'0.3em',color:T.gold,fontFamily:'sans-serif',marginBottom:16}}>EVENT SETTINGS</div>
+            <div style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,padding:20,marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',color:T.n800,fontFamily:'sans-serif',marginBottom:4}}>PDF / PNG FILENAME PREFIX</div>
+              <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',marginBottom:12}}>
+                Il file scaricato si chiamerà: <strong>{(pdfPrefix||'xinao-invitation').toLowerCase().replace(/\s+/g,'-')}-[cognome].pdf</strong>
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <input value={pdfPrefix} onChange={e=>setPdfPrefix(e.target.value)}
+                  placeholder="es. xinao-invitation oppure 新邀请函"
+                  style={{flex:1,padding:'10px 12px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none'}}/>
+                <button disabled={savingPrefix} onClick={async()=>{
+                  setSavingPrefix(true)
+                  await supabase.from('events').update({pdf_prefix:pdfPrefix.trim()||null,updated_at:new Date().toISOString()}).eq('id',eventId)
+                  setEvent(e=>e?{...e,pdf_prefix:pdfPrefix.trim()||null}:e)
+                  setSavingPrefix(false)
+                }} style={{padding:'10px 18px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',fontWeight:700,whiteSpace:'nowrap'}}>
+                  {savingPrefix?'SAVING…':'SAVE'}
+                </button>
+              </div>
             </div>
           </div>
         )}

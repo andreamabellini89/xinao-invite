@@ -80,6 +80,7 @@ export function InvitationCard({ guest, event, showDownload=false, lang='en' }: 
   const line2  = words.slice(mid).join(' ')
   const cardBg = '#F8F5EF'
   const shortCode = guest.qr_token.slice(0, 8).toUpperCase()
+  const filePrefix = (event.pdf_prefix || 'xinao-invitation').replace(/\s+/g, '-').toLowerCase()
 
   // ── PNG export ──
   const downloadPNG = async () => {
@@ -94,7 +95,7 @@ export function InvitationCard({ guest, event, showDownload=false, lang='en' }: 
         skipFonts: false,
       })
       const a = document.createElement('a')
-      a.download = `xinao-invitation-${guest.last_name.toLowerCase()}.png`
+      a.download = `${filePrefix}-${guest.last_name.toLowerCase()}.png`
       a.href = dataUrl
       a.click()
       setExportMsg('')
@@ -134,7 +135,7 @@ export function InvitationCard({ guest, event, showDownload=false, lang='en' }: 
       })
 
       pdf.addImage(dataUrl, 'PNG', 0, 0, pdfW, pdfH)
-      pdf.save(`xinao-invitation-${guest.last_name.toLowerCase()}.pdf`)
+      pdf.save(`${filePrefix}-${guest.last_name.toLowerCase()}.pdf`)
       setExportMsg('')
     } catch (e) {
       console.error(e)

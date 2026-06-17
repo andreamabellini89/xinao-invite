@@ -52,6 +52,7 @@ export interface XinaoEvent {
   status: EventStatus
   cover_image_url: string | null
   event_number: string | null
+  pdf_prefix: string | null
   email_copy: EmailCopy | null
   agenda: AgendaItem[] | null
   created_at: string
