@@ -407,11 +407,11 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
     if (!lines.length) return
     setSaving(true)
     const { v4: uuid } = await import('uuid')
-    const start = lines[0].toLowerCase().includes('first_name') ? 1 : 0
+    const start = lines[0].toLowerCase().includes('name') ? 1 : 0
     const rows = lines.slice(start).map(line => {
-      const [fn='',ln='',em='',ph=''] = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''))
-      return { event_id:eventId, first_name:fn, last_name:ln, email:em||null, phone:ph||null, guest_token:uuid(), qr_token:uuid(), status:'invited' as const }
-    }).filter(r=>r.first_name&&r.last_name)
+      const [name='',em='',co=''] = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''))
+      return { event_id:eventId, first_name:name, last_name:'', email:em||null, company:co||null, guest_token:uuid(), qr_token:uuid(), status:'invited' as const }
+    }).filter(r=>r.first_name)
     const { error } = await supabase.from('guests').insert(rows)
     setSaving(false)
     if (error) { setMsg('Error: '+error.message); return }
@@ -429,19 +429,18 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 })
       if (!rows.length) return
       const firstRow = (rows[0] as string[]).map((c: string) => String(c).toLowerCase())
-      const hasHeader = firstRow.some(c => ['first_name','firstname','nome','name','last_name','lastname','cognome'].includes(c))
+      const hasHeader = firstRow.some(c => ['name','first_name','firstname','nome'].includes(c))
       const dataRows = hasHeader ? rows.slice(1) : rows
       const colIdx = hasHeader ? {
-        fn: firstRow.findIndex(c=>['first_name','firstname','nome'].includes(c)),
-        ln: firstRow.findIndex(c=>['last_name','lastname','cognome','surname'].includes(c)),
+        name: firstRow.findIndex(c=>['name','first_name','firstname','nome'].includes(c)),
         em: firstRow.findIndex(c=>['email','e-mail','mail'].includes(c)),
-        ph: firstRow.findIndex(c=>['phone','telefono','tel','mobile','cellulare'].includes(c)),
-      } : { fn:0, ln:1, em:2, ph:3 }
+        co: firstRow.findIndex(c=>['company','azienda','società','societa'].includes(c)),
+      } : { name:0, em:1, co:2 }
       const lines = dataRows
-        .filter((r: any[]) => r[colIdx.fn]||r[colIdx.ln])
+        .filter((r: any[]) => r[colIdx.name])
         .map((r: any[]) => [
-          r[colIdx.fn]??'', r[colIdx.ln]??'',
-          r[colIdx.em]??'', r[colIdx.ph]??''
+          r[colIdx.name]??'',
+          r[colIdx.em]??'', r[colIdx.co]??''
         ].map(v=>String(v).trim()).join(','))
       setCsv(lines.join('\n'))
       setMsg(`${lines.length} rows loaded from Excel — click Import CSV to confirm.`)
@@ -494,8 +493,8 @@ function AddGuestModal({ eventId, onDone, onClose }: { eventId:string; onDone:()
         {tab==='csv'&&(
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{fontSize:11,color:T.n600,fontFamily:'sans-serif',lineHeight:1.7,background:T.n100,padding:'10px 12px',borderRadius:3}}>
-              <strong>CSV:</strong> <code>first_name,last_name,email,phone</code> — one per line.<br/>
-              <strong>Excel:</strong> columns <code>first_name · last_name · email · phone</code> (or same order without header).
+              <strong>CSV:</strong> <code>name,email,company</code> — one per line.<br/>
+              <strong>Excel:</strong> columns <code>name · email · company</code> (or same order without header).
             </div>
             {/* Excel upload */}
             <label style={{display:'flex',alignItems:'center',gap:8,padding:'9px 13px',border:`1px dashed ${T.n300}`,borderRadius:3,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',color:T.n600}}>

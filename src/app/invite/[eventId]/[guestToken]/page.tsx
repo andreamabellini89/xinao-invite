@@ -18,6 +18,7 @@ export default function GuestInvitePage() {
   const [guest,   setGuest]   = useState<Guest|null>(null)
   const [step,    setStep]    = useState<'loading'|'invalid'|'ready'>('loading')
   const [isNew,   setIsNew]   = useState(false)
+  const [lang,    setLang]    = useState<'en'|'zh'>('en')
 
   useEffect(() => {
     const load = async () => {
@@ -103,8 +104,14 @@ export default function GuestInvitePage() {
         </div>
       </div>
 
-      <div style={{fontSize:9,letterSpacing:'0.3em',color:T.gold,fontFamily:'sans-serif',marginBottom:16}}>YOUR PERSONAL INVITATION</div>
-      <InvitationCard guest={guest} event={event} showDownload/>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+        <div style={{fontSize:9,letterSpacing:'0.3em',color:T.gold,fontFamily:'sans-serif'}}>YOUR PERSONAL INVITATION</div>
+        <button onClick={() => setLang(l => l === 'en' ? 'zh' : 'en')}
+          style={{padding:'4px 10px',border:`1px solid ${T.gold}`,borderRadius:2,background:'transparent',color:T.gold,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',fontFamily:'sans-serif',fontWeight:700}}>
+          {lang === 'en' ? '中文' : 'EN'}
+        </button>
+      </div>
+      <InvitationCard guest={guest} event={event} showDownload lang={lang}/>
       <div style={{fontSize:11,color:T.n400,marginTop:14,fontFamily:'sans-serif',textAlign:'center',maxWidth:400}}>
         Show this QR code at the entrance on <strong>{event.date}</strong>.<br/>
         You can also screenshot this page.

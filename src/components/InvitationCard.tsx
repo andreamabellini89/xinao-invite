@@ -43,10 +43,34 @@ function RealQRCode({ value, size=140 }: { value:string; size?:number }) {
   )
 }
 
-export function InvitationCard({ guest, event, showDownload=false }: { guest:Guest; event:Event; showDownload?:boolean }) {
+const LABELS = {
+  en: {
+    personalInvitation: 'PERSONAL INVITATION',
+    finalReminder: 'FINAL REMINDER',
+    dear: 'DEAR',
+    welcomeText: (eventName: string) => `We look forward to welcoming you\nto the ${eventName}.`,
+    qrInstruction: 'PLEASE PRESENT QR CODE\nUPON ARRIVAL',
+    thankYou: 'THANK YOU',
+    downloadPng: '⬇ DOWNLOAD PNG',
+    downloadPdf: '⬇ DOWNLOAD PDF',
+  },
+  zh: {
+    personalInvitation: '个人邀请函',
+    finalReminder: '最终提醒',
+    dear: '尊敬的',
+    welcomeText: (eventName: string) => `期待在 ${eventName}\n欢迎您的到来。`,
+    qrInstruction: '入场时请出示此二维码',
+    thankYou: '谢谢',
+    downloadPng: '⬇ 下载 PNG',
+    downloadPdf: '⬇ 下载 PDF',
+  },
+}
+
+export function InvitationCard({ guest, event, showDownload=false, lang='en' }: { guest:Guest; event:Event; showDownload?:boolean; lang?:'en'|'zh' }) {
   const cardRef  = useRef<HTMLDivElement>(null)
   const [exporting, setExporting] = useState(false)
   const [exportMsg, setExportMsg] = useState('')
+  const L = LABELS[lang]
 
   const name   = `${guest.first_name} ${guest.last_name}`.toUpperCase()
   const qrVal  = `${SITE}/checkin/${event.id}/${guest.qr_token}`
@@ -154,13 +178,13 @@ export function InvitationCard({ guest, event, showDownload=false }: { guest:Gue
           </div>
 
           <div style={{ width:24, height:1, background:T.gold, margin:'20px auto' }}/>
-          <div style={{ fontSize:10, letterSpacing:'0.38em', color:T.gold, fontFamily:'sans-serif', marginBottom:18 }}>PERSONAL INVITATION</div>
+          <div style={{ fontSize:10, letterSpacing:'0.38em', color:T.gold, fontFamily:'sans-serif', marginBottom:18 }}>{L.personalInvitation}</div>
 
           {/* Guest name */}
-          <div style={{ fontSize:13, letterSpacing:'0.14em', color:'#5C5650', fontFamily:'sans-serif', marginBottom:8 }}>DEAR</div>
-          <div style={{ fontSize:24, fontWeight:700, color:'#1A1008', letterSpacing:'0.07em', textAlign:'center', lineHeight:1.15, marginBottom:28 }}>{name}</div>
+          <div style={{ fontSize:13, letterSpacing:'0.14em', color:'#5C5650', fontFamily:'sans-serif', marginBottom:8 }}>{L.dear}</div>
+          <div style={{ fontSize:24, fontWeight:700, color:'#1A1008', letterSpacing:'0.07em', textAlign:'center', lineHeight:1.15, marginBottom:28, fontFamily:"'Noto Serif SC','Georgia','Times New Roman',serif" }}>{name}</div>
 
-          <div style={{ fontSize:10, letterSpacing:'0.38em', color:T.gold, fontFamily:'sans-serif', marginBottom:12 }}>FINAL REMINDER</div>
+          <div style={{ fontSize:10, letterSpacing:'0.38em', color:T.gold, fontFamily:'sans-serif', marginBottom:12 }}>{L.finalReminder}</div>
 
           {/* Event title */}
           <div style={{ fontSize:44, fontWeight:900, color:'#1A1008', lineHeight:1.0, textAlign:'center', marginBottom:2, letterSpacing:'-0.01em' }}>{line1}</div>
@@ -171,7 +195,9 @@ export function InvitationCard({ guest, event, showDownload=false }: { guest:Gue
           <div style={{ width:24, height:1, background:T.gold, margin:'20px auto' }}/>
 
           <div style={{ fontSize:14, color:'#3A3028', textAlign:'center', lineHeight:1.8, marginBottom:24 }}>
-            We look forward to welcoming you<br/>to the {event.subtitle ?? event.name}.
+            {L.welcomeText(event.subtitle ?? event.name).split('\n').map((line, i) => (
+              <span key={i}>{line}{i === 0 && <br/>}</span>
+            ))}
           </div>
 
           <div style={{ fontSize:13, color:T.gold, fontWeight:700, letterSpacing:'0.22em', fontFamily:'sans-serif', marginBottom:8 }}>
@@ -185,7 +211,7 @@ export function InvitationCard({ guest, event, showDownload=false }: { guest:Gue
           {/* QR instruction */}
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
             <div style={{ width:34, height:34, border:'1.5px solid #A09890', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', color:'#A09890', fontSize:15, flexShrink:0 }}>⊟</div>
-            <div style={{ fontSize:9, letterSpacing:'0.22em', color:'#5C5650', fontFamily:'sans-serif', lineHeight:1.5 }}>PLEASE PRESENT QR CODE<br/>UPON ARRIVAL</div>
+            <div style={{ fontSize:9, letterSpacing:'0.22em', color:'#5C5650', fontFamily:'sans-serif', lineHeight:1.5 }}>{L.qrInstruction.split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br/>}</span>)}</div>
           </div>
 
           {/* REAL QR Code */}
@@ -197,7 +223,7 @@ export function InvitationCard({ guest, event, showDownload=false }: { guest:Gue
           </div>
 
           <div style={{ width:24, height:1, background:T.gold, margin:'18px auto' }}/>
-          <div style={{ fontSize:10, letterSpacing:'0.45em', color:T.gold, fontFamily:'sans-serif' }}>THANK YOU</div>
+          <div style={{ fontSize:10, letterSpacing:'0.45em', color:T.gold, fontFamily:'sans-serif' }}>{L.thankYou}</div>
         </div>
       </div>
 
@@ -207,11 +233,11 @@ export function InvitationCard({ guest, event, showDownload=false }: { guest:Gue
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
             <button onClick={downloadPNG} disabled={exporting}
               style={{ padding:'13px 28px', background:T.gold, color:'#fff', border:'none', borderRadius:2, cursor:exporting?'wait':'pointer', fontSize:11, letterSpacing:'0.2em', fontFamily:'sans-serif', fontWeight:700, minWidth:180 }}>
-              {exporting ? exportMsg : '⬇ DOWNLOAD PNG'}
+              {exporting ? exportMsg : L.downloadPng}
             </button>
             <button onClick={downloadPDF} disabled={exporting}
               style={{ padding:'13px 28px', background:T.n800, color:'#fff', border:'none', borderRadius:2, cursor:exporting?'wait':'pointer', fontSize:11, letterSpacing:'0.2em', fontFamily:'sans-serif', fontWeight:700, minWidth:180 }}>
-              {exporting ? exportMsg : '⬇ DOWNLOAD PDF'}
+              {exporting ? exportMsg : L.downloadPdf}
             </button>
           </div>
           {exportMsg && <div style={{ fontSize:11, color:T.n400, fontFamily:'sans-serif' }}>{exportMsg}</div>}
