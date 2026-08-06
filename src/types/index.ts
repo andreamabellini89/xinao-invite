@@ -53,6 +53,8 @@ export interface XinaoEvent {
   cover_image_url: string | null
   event_number: string | null
   pdf_prefix: string | null
+  show_datetime_block: boolean
+  show_confirm_section: boolean
   email_copy: EmailCopy | null
   agenda: AgendaItem[] | null
   created_at: string

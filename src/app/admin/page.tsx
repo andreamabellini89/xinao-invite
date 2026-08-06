@@ -137,7 +137,7 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
   const [form, setForm] = useState<EventFormData>(initial?{name:initial.name,subtitle:initial.subtitle??'',date:initial.date,time:initial.time,location:initial.location,address:initial.address??'',description:initial.description??'',status:initial.status,cover_image_url:initial.cover_image_url,event_number:initial.event_number??'',schedule:(initial as XinaoEvent & {schedule?: ScheduleItem[]}).schedule??[]}:blank)
   const [saving, setSaving] = useState(false)
   const set = (k:keyof EventFormData, v:string|null) => setForm(f=>({...f,[k]:v}))
-  const valid = form.name && form.date && form.location
+  const valid = form.name && form.date
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16,overflowY:'auto'}}>
@@ -150,7 +150,7 @@ function EventFormModal({ initial, onSave, onClose }: { initial?:XinaoEvent|null
           <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:T.n400}}>✕</button>
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          {([['Event Name *','name'],['Subtitle / Edition','subtitle'],['Date *','date','24 JUNE 2026'],['Time *','time','8:00 PM'],['Venue / Location *','location'],['Full Address','address'],['Description / Tagline','description'],['Event Number (e.g. 01)','event_number','01']] as [string,keyof EventFormData,string?][]).map(([label,key,ph])=>(
+          {([['Event Name *','name'],['Subtitle / Edition','subtitle'],['Date *','date','24 JUNE 2026'],['Time','time','8:00 PM'],['Venue / Location','location'],['Full Address','address'],['Description / Tagline','description'],['Event Number (e.g. 01)','event_number','01']] as [string,keyof EventFormData,string?][]).map(([label,key,ph])=>(
             <div key={key}>
               <label style={{display:'block',fontSize:9,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:5}}>{label.toUpperCase()}</label>
               <input value={form[key] as string??''} placeholder={ph??''} onChange={e=>set(key,e.target.value)} style={{width:'100%',padding:'10px 13px',border:`1px solid ${T.n200}`,borderRadius:2,fontSize:13,fontFamily:'sans-serif',color:T.n800,outline:'none',background:T.white,boxSizing:'border-box'}}/>

@@ -530,6 +530,9 @@ export default function EventDetailPage() {
   const [tab,      setTab]      = useState<'overview'|'email'|'guests'|'requests'|'scanner'|'settings'>('overview')
   const [pdfPrefix, setPdfPrefix] = useState('')
   const [savingPrefix, setSavingPrefix] = useState(false)
+  const [showDatetimeBlock,  setShowDatetimeBlock]  = useState(true)
+  const [showConfirmSection, setShowConfirmSection] = useState(true)
+  const [savingToggles, setSavingToggles] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [reqFilter,    setReqFilter]    = useState('pending')
   const [search,   setSearch]   = useState('')
@@ -555,6 +558,8 @@ export default function EventDetailPage() {
       if (evtErr) throw evtErr
       setEvent(evt); setGuests(gsts ?? [])
       setPdfPrefix(evt?.pdf_prefix ?? '')
+      setShowDatetimeBlock(evt?.show_datetime_block ?? true)
+      setShowConfirmSection(evt?.show_confirm_section ?? true)
     } catch (e:any) { setError(e.message) }
     // registration_requests may not exist yet — load separately, fail silently
     try {
@@ -887,7 +892,9 @@ export default function EventDetailPage() {
                     </div>
                     {preview===g.id&&(
                       <div style={{padding:'16px 14px',background:'#F9F7F2',borderTop:`1px solid ${T.n100}`}}>
-                        <div style={{display:'flex',justifyContent:'center',marginBottom:12}}><InvitationCard guest={g} event={event} showDownload/></div>
+                        <div style={{display:'flex',justifyContent:'center',marginBottom:12}}>
+                          <iframe src={`/api/preview-email?eventId=${eventId}&guestId=${g.id}`} style={{width:'100%',maxWidth:520,height:700,border:'none',borderRadius:4}} title="Email preview"/>
+                        </div>
                         <div style={{fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>INVITATION LINK</div>
                         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
                           <code style={{fontSize:10,color:T.gold,background:T.n100,padding:'4px 7px',borderRadius:2,wordBreak:'break-all'}}>{SITE}/invite/{eventId}/{g.guest_token}</code>
@@ -935,7 +942,7 @@ export default function EventDetailPage() {
                     {preview===g.id&&(
                       <div style={{padding:'18px 16px',background:'#F9F7F2',borderBottom:`1px solid ${T.n100}`}}>
                         <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
-                          <InvitationCard guest={g} event={event} showDownload/>
+                          <iframe src={`/api/preview-email?eventId=${eventId}&guestId=${g.id}`} style={{width:520,height:700,border:'none',borderRadius:4,flexShrink:0}} title="Email preview"/>
                           <div style={{display:'flex',flexDirection:'column',gap:10,minWidth:200,flex:1}}>
                             {[['EMAIL',g.email??'—'],['PHONE',g.phone??'—'],['COMPANY',g.company??'—']].map(([l,v])=>(
                               <div key={l}><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:2}}>{l}</div><div style={{fontSize:12,color:T.n800,fontFamily:'sans-serif'}}>{v}</div></div>
@@ -1061,6 +1068,34 @@ export default function EventDetailPage() {
         {tab==='settings'&&(
           <div style={{maxWidth:480}}>
             <div style={{fontSize:9,letterSpacing:'0.3em',color:T.gold,fontFamily:'sans-serif',marginBottom:16}}>EVENT SETTINGS</div>
+            {/* Email section toggles */}
+            <div style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,padding:20,marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',color:T.n800,fontFamily:'sans-serif',marginBottom:4}}>EMAIL SECTIONS</div>
+              <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',marginBottom:14}}>Scegli quali sezioni mostrare nell'email inviata agli ospiti.</div>
+              {[
+                ['show_datetime', showDatetimeBlock, setShowDatetimeBlock, 'Data / Ora / Venue'],
+                ['show_confirm',  showConfirmSection, setShowConfirmSection, 'Testo e bottone "Confirm Attendance"'],
+              ].map(([key, val, setter, label]: any) => (
+                <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:`1px solid ${T.n100}`}}>
+                  <div style={{fontSize:12,color:T.n700,fontFamily:'sans-serif'}}>{label}</div>
+                  <button onClick={()=>setter(!val)} style={{
+                    width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',position:'relative',
+                    background:val?T.gold:T.n300,transition:'background 0.2s',
+                  }}>
+                    <span style={{position:'absolute',top:3,left:val?22:3,width:18,height:18,borderRadius:'50%',background:'#fff',transition:'left 0.2s',display:'block'}}/>
+                  </button>
+                </div>
+              ))}
+              <button disabled={savingToggles} onClick={async()=>{
+                setSavingToggles(true)
+                await supabase.from('events').update({show_datetime_block:showDatetimeBlock,show_confirm_section:showConfirmSection,updated_at:new Date().toISOString()}).eq('id',eventId)
+                setEvent(e=>e?{...e,show_datetime_block:showDatetimeBlock,show_confirm_section:showConfirmSection}:e)
+                setSavingToggles(false)
+              }} style={{marginTop:14,padding:'9px 18px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',fontWeight:700}}>
+                {savingToggles?'SAVING…':'SAVE'}
+              </button>
+            </div>
+
             <div style={{background:T.white,border:`1px solid ${T.n200}`,borderRadius:4,padding:20,marginBottom:16}}>
               <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',color:T.n800,fontFamily:'sans-serif',marginBottom:4}}>PDF / PNG FILENAME PREFIX</div>
               <div style={{fontSize:11,color:T.n400,fontFamily:'sans-serif',marginBottom:12}}>
