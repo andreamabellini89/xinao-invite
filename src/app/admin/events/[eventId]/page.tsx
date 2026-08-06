@@ -1077,7 +1077,7 @@ export default function EventDetailPage() {
                 ['show_confirm',  showConfirmSection, setShowConfirmSection, 'Testo e bottone "Confirm Attendance"'],
               ].map(([key, val, setter, label]: any) => (
                 <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:`1px solid ${T.n100}`}}>
-                  <div style={{fontSize:12,color:T.n700,fontFamily:'sans-serif'}}>{label}</div>
+                  <div style={{fontSize:12,color:T.n600,fontFamily:'sans-serif'}}>{label}</div>
                   <button onClick={()=>setter(!val)} style={{
                     width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',position:'relative',
                     background:val?T.gold:T.n300,transition:'background 0.2s',
