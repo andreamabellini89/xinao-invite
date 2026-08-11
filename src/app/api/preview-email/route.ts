@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   <div style="max-width:520px;margin:40px auto;background:#F8F5EF;border:1px solid #E0D8CC;">
 
     <div style="padding:44px 44px 32px;text-align:center;border-bottom:1px solid #E0D8CC;">
-      <div style="font-size:28px;font-weight:700;color:#B8922A;letter-spacing:0.1em;">XINAO</div>
+      <img src="${SITE}/xinao-logo.svg" alt="XINAO" width="200" style="max-width:200px;display:block;margin:0 auto;" />
       <div style="width:28px;height:1px;background:#B8922A;margin:12px auto;"></div>
       <div style="font-size:10px;letter-spacing:0.38em;color:#5C5650;font-family:sans-serif;">${t.personal_invitation_en}</div>
       <div style="font-size:10px;letter-spacing:0.2em;color:#8A8078;font-family:sans-serif;margin-top:2px;">${t.personal_invitation_zh}</div>
@@ -78,18 +78,11 @@ export async function GET(req: NextRequest) {
       ${event.show_datetime_block !== false ? `
       <div style="width:28px;height:1px;background:#B8922A;margin:0 auto 24px;"></div>
       <div style="font-size:14px;color:#B8922A;font-weight:700;letter-spacing:0.2em;font-family:sans-serif;margin-bottom:8px;">
-        ${event.date} — ${event.time}
+        ${event.date}${event.time ? ` — ${event.time}` : ''}
       </div>
       <div style="font-size:13px;font-weight:700;letter-spacing:0.15em;color:#1A1008;font-family:sans-serif;margin-bottom:5px;">${event.location}</div>
       ${event.address ? `<div style="font-size:11px;color:#8A8078;font-family:sans-serif;">${event.address}</div>` : ''}
       <div style="width:28px;height:1px;background:#B8922A;margin:28px auto;"></div>
-      ` : ''}
-
-      ${event.show_confirm_section !== false ? `
-      <div style="font-size:14px;color:#3A3028;line-height:1.8;margin-bottom:32px;">
-        ${t.confirm_en}<br/>
-        <span style="font-size:12px;color:#8A8078;font-family:sans-serif;">${t.confirm_zh}</span>
-      </div>
       ` : ''}
 
       ${agenda.length > 0 ? `
@@ -106,6 +99,12 @@ export async function GET(req: NextRequest) {
         </tr>`).join('')}
       </table>` : ''}
 
+      ${event.show_confirm_section !== false ? `
+      <div style="font-size:14px;color:#3A3028;line-height:1.8;margin-bottom:32px;">
+        ${t.confirm_en}<br/>
+        <span style="font-size:12px;color:#8A8078;font-family:sans-serif;">${t.confirm_zh}</span>
+      </div>
+
       <a href="${inviteUrl}" style="display:inline-block;padding:16px 40px;background:#2A2520;color:#F5F0E8;text-decoration:none;font-family:sans-serif;font-size:12px;font-weight:700;letter-spacing:0.24em;border-radius:2px;">
         ${t.confirm_button_en}
       </a>
@@ -116,6 +115,7 @@ export async function GET(req: NextRequest) {
         <span style="font-size:10px;color:#8A8078;">${t.copy_link_zh}</span><br/>
         <a href="${inviteUrl}" style="color:#B8922A;word-break:break-all;">${inviteUrl}</a>
       </div>
+      ` : ''}
     </div>
 
     <div style="padding:24px 44px;border-top:1px solid #E0D8CC;text-align:center;">

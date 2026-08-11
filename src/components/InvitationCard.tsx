@@ -202,7 +202,7 @@ export function InvitationCard({ guest, event, showDownload=false, lang='en' }: 
           </div>
 
           <div style={{ fontSize:13, color:T.gold, fontWeight:700, letterSpacing:'0.22em', fontFamily:'sans-serif', marginBottom:8 }}>
-            {event.date} — {event.time}
+            {event.date}{event.time ? ` — ${event.time}` : ''}
           </div>
           <div style={{ fontSize:13, fontWeight:700, letterSpacing:'0.18em', color:'#1A1008', fontFamily:'sans-serif', marginBottom:4 }}>{event.location}</div>
           {event.address && <div style={{ fontSize:11, letterSpacing:'0.1em', color:'#8A8078', fontFamily:'sans-serif', textAlign:'center' }}>{event.address}</div>}

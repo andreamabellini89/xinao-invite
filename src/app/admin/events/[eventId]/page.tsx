@@ -533,6 +533,7 @@ export default function EventDetailPage() {
   const [showDatetimeBlock,  setShowDatetimeBlock]  = useState(true)
   const [showConfirmSection, setShowConfirmSection] = useState(true)
   const [savingToggles, setSavingToggles] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0)
   const [statusFilter, setStatusFilter] = useState('all')
   const [reqFilter,    setReqFilter]    = useState('pending')
   const [search,   setSearch]   = useState('')
@@ -893,12 +894,7 @@ export default function EventDetailPage() {
                     {preview===g.id&&(
                       <div style={{padding:'16px 14px',background:'#F9F7F2',borderTop:`1px solid ${T.n100}`}}>
                         <div style={{display:'flex',justifyContent:'center',marginBottom:12}}>
-                          <iframe src={`/api/preview-email?eventId=${eventId}&guestId=${g.id}`} style={{width:'100%',maxWidth:520,height:700,border:'none',borderRadius:4}} title="Email preview"/>
-                        </div>
-                        <div style={{fontSize:9,letterSpacing:'0.18em',color:T.n400,fontFamily:'sans-serif',marginBottom:4}}>INVITATION LINK</div>
-                        <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
-                          <code style={{fontSize:10,color:T.gold,background:T.n100,padding:'4px 7px',borderRadius:2,wordBreak:'break-all'}}>{SITE}/invite/{eventId}/{g.guest_token}</code>
-                          <button onClick={()=>navigator.clipboard.writeText(`${SITE}/invite/${eventId}/${g.guest_token}`)} style={{padding:'5px 10px',background:'none',border:`1px solid ${T.n200}`,borderRadius:2,cursor:'pointer',fontSize:9,fontFamily:'sans-serif',color:T.n600}}>COPY</button>
+                          <iframe key={previewKey} src={`/api/preview-email?eventId=${eventId}&guestId=${g.id}`} style={{width:'100%',maxWidth:520,height:700,border:'none',borderRadius:4}} title="Email preview"/>
                         </div>
                       </div>
                     )}
@@ -942,7 +938,7 @@ export default function EventDetailPage() {
                     {preview===g.id&&(
                       <div style={{padding:'18px 16px',background:'#F9F7F2',borderBottom:`1px solid ${T.n100}`}}>
                         <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
-                          <iframe src={`/api/preview-email?eventId=${eventId}&guestId=${g.id}`} style={{width:520,height:700,border:'none',borderRadius:4,flexShrink:0}} title="Email preview"/>
+                          <iframe key={previewKey} src={`/api/preview-email?eventId=${eventId}&guestId=${g.id}`} style={{width:520,height:700,border:'none',borderRadius:4,flexShrink:0}} title="Email preview"/>
                           <div style={{display:'flex',flexDirection:'column',gap:10,minWidth:200,flex:1}}>
                             {[['EMAIL',g.email??'—'],['PHONE',g.phone??'—'],['COMPANY',g.company??'—']].map(([l,v])=>(
                               <div key={l}><div style={{fontSize:8,letterSpacing:'0.2em',color:T.n400,fontFamily:'sans-serif',marginBottom:2}}>{l}</div><div style={{fontSize:12,color:T.n800,fontFamily:'sans-serif'}}>{v}</div></div>
@@ -1090,6 +1086,7 @@ export default function EventDetailPage() {
                 setSavingToggles(true)
                 await supabase.from('events').update({show_datetime_block:showDatetimeBlock,show_confirm_section:showConfirmSection,updated_at:new Date().toISOString()}).eq('id',eventId)
                 setEvent(e=>e?{...e,show_datetime_block:showDatetimeBlock,show_confirm_section:showConfirmSection}:e)
+                setPreviewKey(k=>k+1)
                 setSavingToggles(false)
               }} style={{marginTop:14,padding:'9px 18px',background:T.n800,color:T.white,border:'none',borderRadius:2,cursor:'pointer',fontSize:11,fontFamily:'sans-serif',fontWeight:700}}>
                 {savingToggles?'SAVING…':'SAVE'}
