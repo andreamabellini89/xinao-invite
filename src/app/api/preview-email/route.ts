@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       ${event.show_datetime_block !== false ? `
       <div style="width:28px;height:1px;background:#B8922A;margin:0 auto 24px;"></div>
       <div style="font-size:14px;color:#B8922A;font-weight:700;letter-spacing:0.2em;font-family:sans-serif;margin-bottom:8px;">
-        ${event.date}${event.time ? ` — ${event.time}` : ''}
+        ${event.date}${event.time?.trim() ? ` — ${event.time.trim()}` : ''}
       </div>
       <div style="font-size:13px;font-weight:700;letter-spacing:0.15em;color:#1A1008;font-family:sans-serif;margin-bottom:5px;">${event.location}</div>
       ${event.address ? `<div style="font-size:11px;color:#8A8078;font-family:sans-serif;">${event.address}</div>` : ''}
