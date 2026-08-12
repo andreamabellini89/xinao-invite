@@ -4,7 +4,8 @@ import { EMAIL_COPY as DEFAULT_COPY, EVENT_AGENDA as DEFAULT_AGENDA } from '@/li
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+  { global: { fetch: (url, opts) => fetch(url, { ...opts, cache: 'no-store' }) } }
 )
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://xinao-events.com'
 
